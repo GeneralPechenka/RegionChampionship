@@ -30,9 +30,10 @@ namespace AuthentificationService
                       .GetConnectionString("PostgresConnection"))
                       .LogTo(Console.WriteLine, LogLevel.Warning));
             builder.Services.AddSingleton<TokenStorage>();
-            builder.Services.AddScoped<IAuthService,AuthService>();
-            builder.Services.AddScoped<UserValidator>(); // Добавьте эту строку
             builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
+            builder.Services.AddScoped<IAuthService,AuthService>();
+            builder.Services.AddScoped<UserValidator>();
+            builder.Services.AddScoped<ITokenHeaderService, TokenHeaderService>();
             builder.Services.AddScoped<ITokenProvider,JwtProvider>();
             var app = builder.Build();
 

@@ -12,13 +12,14 @@ namespace AuthentificationService.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
+        private readonly ITokenHeaderService _tokenHeaderService;
         private readonly IAuthService _authService;
-        private readonly IPasswordHasher _hasher;
 
-        public AuthController(IAuthService authService, IPasswordHasher hasher)
+        
+        public AuthController(IAuthService authService, ITokenHeaderService tokenHeaderService)
         {
+            _tokenHeaderService = tokenHeaderService;
             _authService = authService;
-            _hasher = hasher;
         }
         [HttpPost("test")]
         public async Task<IActionResult> Test()
@@ -44,11 +45,12 @@ namespace AuthentificationService.Controllers
             }
         }
         [HttpPost("logout")]
-        public async Task<IActionResult> Logout([FromBody] LogoutRequestDto request, CancellationToken token)
+        public async Task<IActionResult> Logout(CancellationToken token)
         {
             try
             {
-                await _authService.LogoutAsync(request.Token, token);
+                var jwtToken = _tokenHeaderService.GetTokenFromRequest(HttpContext.Request);
+                await _authService.LogoutAsync(jwtToken, token);
                 return Ok();
             }
             catch(AuthException ex)
@@ -87,15 +89,16 @@ namespace AuthentificationService.Controllers
             }
         }
         [HttpPost("Refresh")]
-        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenDto request, CancellationToken token)
+        public async Task<IActionResult> RefreshToken(CancellationToken token)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(request.Token))
+                var jwtToken = _tokenHeaderService.GetTokenFromRequest(HttpContext.Request);
+                if (string.IsNullOrWhiteSpace(jwtToken))
                 {
                     return BadRequest("Некорректный формат доступа. Возможно, вы не авторизованы.");
                 }
-                var newToken = await _authService.RefreshTokenAsync(request.Token, token);
+                var newToken = await _authService.RefreshTokenAsync(jwtToken, token);
 
                 return Ok(newToken);
             }

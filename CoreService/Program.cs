@@ -1,6 +1,8 @@
 
 using Database;
+using Microsoft.EntityFrameworkCore;
 using Middlewares;
+using Services.Options;
 
 namespace CoreService
 {
@@ -15,16 +17,14 @@ namespace CoreService
             builder.Services.AddControllers();
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();
-
+            builder.Services.Configure<JwtOptions>(
+                builder.Configuration.GetSection("JwtOptions"));
+            builder.Services.AddDbContext<AppDbContext>(
+                    options => options.UseNpgsql(builder.Configuration
+                      .GetConnectionString("PostgresConnection"))
+                      .LogTo(Console.WriteLine, LogLevel.Warning));
             var app = builder.Build();
-            //using (var scope = app.Services.CreateScope())
-            //{
-            //    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            //    // ? Делай здесь, а не в конструкторе!
-            //    dbContext.Database.EnsureCreated();
-
-            //}
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
