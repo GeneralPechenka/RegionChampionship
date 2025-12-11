@@ -1,6 +1,8 @@
 ﻿namespace Domain.Enums
 {
-    public enum EmployeeRoleEnum { Admin, Franchisee, Operator, Technician, Manager }
+    public enum EmployeeRoleEnum { Admin, Franchisee, Operator, Technician, Manager,
+        Employee
+    }
     public static class EmployeeRoleEnumExtensions
     {
         public static string ToStringRu(this EmployeeRoleEnum role)
