@@ -1,5 +1,6 @@
 
 using Database;
+using DTOs.MappingProfiles;
 using Microsoft.EntityFrameworkCore;
 using Middlewares;
 using Services.Options;
@@ -23,6 +24,13 @@ namespace CoreService
                     options => options.UseNpgsql(builder.Configuration
                       .GetConnectionString("PostgresConnection"))
                       .LogTo(Console.WriteLine, LogLevel.Warning));
+
+            var profiles = new Type[]{
+                typeof(VendingMapProfile),
+                typeof(MaintenanceProfile),
+                typeof(PayTypeMapProfile)
+            };
+            builder.Services.AddAutoMapper(profiles);
             var app = builder.Build();
 
 
