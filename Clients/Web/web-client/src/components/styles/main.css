@@ -1,0 +1,191 @@
+/* Основные стили */
+:root {
+    --primary-color: #2c3e50;
+    --secondary-color: #3498db;
+    --success-color: #27ae60;
+    --warning-color: #f39c12;
+    --danger-color: #e74c3c;
+    --info-color: #00b894;
+    --purple-color: #9b59b6;
+  }
+  
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+  }
+  
+  .dashboard-container {
+    padding: 20px;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  
+  /* Карточки статистики */
+  .stats-card {
+    border-left: 4px solid;
+    transition: all 0.3s ease;
+    height: 100%;
+  }
+  
+  .stats-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+  }
+  
+  .icon-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+  }
+  
+  .bg-primary-light {
+    background-color: rgba(52, 152, 219, 0.1);
+  }
+  
+  .bg-success-light {
+    background-color: rgba(39, 174, 96, 0.1);
+  }
+  
+  .bg-warning-light {
+    background-color: rgba(243, 156, 18, 0.1);
+  }
+  
+  .bg-danger-light {
+    background-color: rgba(231, 76, 60, 0.1);
+  }
+  
+  /* Кнопки быстрых действий */
+  .quick-action-btn {
+    border: 2px solid #dee2e6;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .quick-action-btn:hover {
+    border-color: var(--secondary-color);
+    background-color: rgba(52, 152, 219, 0.05);
+    transform: translateY(-3px);
+  }
+  
+  /* Строки задач */
+  .task-row {
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .task-row:hover {
+    background-color: #f8f9fa;
+  }
+  
+  .task-row.urgent {
+    border-left: 4px solid var(--danger-color);
+  }
+  
+  .task-row.in-progress {
+    border-left: 4px solid var(--warning-color);
+  }
+  
+  /* Точки приоритета */
+  .priority-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 5px;
+  }
+  
+  .priority-high {
+    background-color: var(--danger-color);
+  }
+  
+  .priority-medium {
+    background-color: var(--warning-color);
+  }
+  
+  .priority-low {
+    background-color: var(--success-color);
+  }
+  
+  /* Системный статус */
+  .status-item {
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .status-item:last-child {
+    border-bottom: none;
+  }
+  
+  /* Уведомления */
+  .alert-item {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.2s;
+  }
+  
+  .alert-item:hover {
+    background-color: #f8f9fa;
+  }
+  
+  .alert-item:last-child {
+    border-bottom: none;
+  }
+  
+  .alert-warning {
+    background-color: #fff3cd;
+    border-color: #ffeaa7;
+  }
+  
+  /* Адаптивность */
+  @media (max-width: 768px) {
+    .dashboard-container {
+      padding: 10px;
+    }
+    
+    .stats-card {
+      margin-bottom: 15px;
+    }
+    
+    .quick-action-btn {
+      min-height: 100px;
+    }
+  }
+  
+  /* Анимации */
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+  
+  .urgent-alert {
+    animation: pulse 2s infinite;
+  }
+  
+  /* Кастомные скроллбары */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+  }
