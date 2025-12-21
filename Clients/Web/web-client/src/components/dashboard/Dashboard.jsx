@@ -40,17 +40,7 @@ const Dashboard = () => {
       <Row className="mb-4">
         <Col>
           <h1 className="fw-bold mb-3">Система управления франчайзингом</h1>
-          <Alert variant="info" className="d-flex align-items-center">
-            <CheckCircle className="me-3" size={24} />
-            <div>
-              <Alert.Heading>Требования ТЗ выполнены:</Alert.Heading>
-              <ul className="mb-0">
-                <li>Мультиязычность (Русский/Английский)</li>
-                <li>Безопасность (HTTPS/HTTP переключение)</li>
-                <li>3 основных модуля: ТА, Календарь, График работ</li>
-              </ul>
-            </div>
-          </Alert>
+
         </Col>
       </Row>
 

@@ -28,6 +28,7 @@ namespace ApiGateway
                 });
             });
             var app = builder.Build();
+            app.UseCors("AllowAll");
             app.UseMiddleware<TokenValidationMiddleware>();
             app.UseMiddleware<SignHttpsRequest>();
 

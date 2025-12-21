@@ -1,82 +1,145 @@
 // src/App.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Container, Navbar, Nav, Button } from 'react-bootstrap';
+import { Navbar, Nav, Button, Container } from 'react-bootstrap'; // Добавили Container
 import { Globe, ShieldCheck } from 'react-bootstrap-icons';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
 
-// Импорт страниц
-//import TAPage from './pages/TAPage';
-import CalendarPage from './components/dashboard/CalendarPage';
-import SchedulePage from './components/dashboard/ShedulePage';
+// Импорт страниц - ПРАВИЛЬНЫЕ ПУТИ:
 import Dashboard from './components/dashboard/Dashboard';
+import TAPage from './components/TaPage'; // ИЛИ './components/TAPage' в зависимости от структуры
+import CalendarPage from './components/dashboard/CalendarPage'; // ИЛИ './components/CalendarPage'
+import SchedulePage from './components/dashboard/ShedulePage';
+import ErrorPage from './components/ErrorPage';
+import LoginForm from './components/loginForm/LoginForm';
+import JwtService from './services/JwtService';
 
 function App() {
   const [language, setLanguage] = useState('ru');
-  const [isHttps, setIsHttps] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(JwtService.isAuthenticated());
+
+  useEffect(() => {
+    const checkAuth = () => {
+      setIsAuthenticated(JwtService.isAuthenticated());
+    };
+    checkAuth();
+  }, []);
+
+  const handleLoginSuccess = () => {
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    JwtService.removeToken();
+    setIsAuthenticated(false);
+  };
+
+  const ProtectedRoute = ({ children }) => {
+    if (!isAuthenticated) {
+      return <Navigate to="/login" replace />;
+    }
+    return children;
+  };
 
   return (
     <Router>
       <div className="app-container">
-        {/* Навбар строго по ТЗ */}
-        <Navbar bg="dark" variant="dark" expand="lg" className="border-bottom">
-          <Container fluid>
-            <Navbar.Brand href="/" className="fw-bold">
-              <span className="text-warning">Vending</span> Franchise System
-            </Navbar.Brand>
-            
-            <Navbar.Toggle aria-controls="basic-navbar-nav" />
-            
-            <Navbar.Collapse id="basic-navbar-nav">
-              <Nav className="me-auto">
-                <Nav.Link href="/">Главная</Nav.Link>
-                <Nav.Link href="/ta">ТА</Nav.Link>
-                <Nav.Link href="/calendar">Календарь обслуживания</Nav.Link>
-                <Nav.Link href="/schedule">График работ</Nav.Link>
-              </Nav>
+        {isAuthenticated && (
+          <Navbar bg="dark" variant="dark" expand="lg" className="border-bottom">
+            <Container fluid>
+              <Navbar.Brand href="/" className="fw-bold">
+                <span className="text-warning">Vending</span> Franchise System
+              </Navbar.Brand>
               
-              {/* Требования ТЗ: мультиязычность и безопасность */}
-              <div className="d-flex align-items-center gap-3">
-                <div className="d-flex align-items-center">
-                  <Globe className="me-2 text-muted" />
-                  <select 
-                    className="form-select form-select-sm bg-dark text-white border-secondary"
-                    value={language}
-                    onChange={(e) => setLanguage(e.target.value)}
-                    style={{ width: 'auto' }}
-                  >
-                    <option value="ru">🇷🇺 Русский</option>
-                    <option value="en">🇺🇸 English</option>
-                  </select>
-                </div>
+              <Navbar.Toggle aria-controls="navbar-nav" />
+              
+              <Navbar.Collapse id="navbar-nav">
+                <Nav className="me-auto">
+                  <Nav.Link href="/">Главная</Nav.Link>
+                  <Nav.Link href="/ta">ТА</Nav.Link>
+                  <Nav.Link href="/calendar">Календарь</Nav.Link>
+                  <Nav.Link href="/schedule">График работ</Nav.Link>
+                </Nav>
                 
-                <div className="d-flex align-items-center">
-                  <ShieldCheck className="me-2 text-muted" />
+                <div className="d-flex align-items-center gap-3">
+                  <div className="d-flex align-items-center">
+                    <Globe className="me-2 text-muted" />
+                    <select 
+                      className="form-select form-select-sm bg-dark text-white border-secondary"
+                      value={language}
+                      onChange={(e) => setLanguage(e.target.value)}
+                      style={{ width: 'auto' }}
+                    >
+                      <option value="ru">🇷🇺 Русский</option>
+                      <option value="en">🇺🇸 English</option>
+                    </select>
+                  </div>
+                  
                   <Button 
-                    variant={isHttps ? "success" : "outline-success"} 
+                    variant="outline-danger" 
                     size="sm"
-                    onClick={() => setIsHttps(!isHttps)}
+                    onClick={handleLogout}
                   >
-                    {isHttps ? 'HTTPS' : 'HTTP'}
+                    Выйти
                   </Button>
                 </div>
-              </div>
-            </Navbar.Collapse>
-          </Container>
-        </Navbar>
+              </Navbar.Collapse>
+            </Container>
+          </Navbar>
+        )}
 
-        {/* Основной контент */}
-        <Container fluid className="main-content py-4">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            {/*<Route path="/ta" element={<TAPage />} />*/}
-            <Route path="/calendar" element={<CalendarPage />} />
-            <Route path="/schedule" element={<SchedulePage />} />
-            
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Container>
+        <main className="main-content">
+          <Container fluid className="py-4">
+            <Routes>
+              {/* Публичные маршруты */}
+              <Route path="/login" element={
+                <LoginForm onLoginSuccess={handleLoginSuccess} />
+              } />
+              
+              {/* Защищенные маршруты */}
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/ta" element={
+                <ProtectedRoute>
+                  <TAPage />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/calendar" element={
+                <ProtectedRoute>
+                  <CalendarPage />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/schedule" element={
+                <ProtectedRoute>
+                  <SchedulePage />
+                </ProtectedRoute>
+              } />
+              
+              {/* Маршрут ошибки */}
+              <Route path="/error" element={<ErrorPage />} />
+              
+              {/* Перенаправление */}
+              <Route path="*" element={
+                isAuthenticated ? 
+                  <Navigate to="/" replace /> : 
+                  <Navigate to="/login" replace />
+              } />
+            </Routes>
+          </Container>
+        </main>
       </div>
     </Router>
   );

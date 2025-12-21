@@ -35,8 +35,18 @@ namespace AuthentificationService
             builder.Services.AddScoped<UserValidator>();
             builder.Services.AddScoped<ITokenHeaderService, TokenHeaderService>();
             builder.Services.AddScoped<ITokenProvider,JwtProvider>();
+            // CORS
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAll", policy =>
+                {
+                    policy.AllowAnyOrigin()
+                          .AllowAnyMethod()
+                          .AllowAnyHeader();
+                });
+            });
             var app = builder.Build();
-
+            app.UseCors("AllowAll");
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {

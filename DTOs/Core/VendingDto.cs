@@ -108,4 +108,67 @@ namespace DTOs.Core
         public string EquipmentStatus { get; set; }
         public string AdditionalInfo { get; set; }
     }
+    public class VendingMachineExportDto
+    {
+        public string Id { get; set; } = null!;
+        public string SerialNumber { get; set; } = null!;
+        public string? InventoryNumber { get; set; }
+        public string? Model { get; set; }
+        public string? Manufacturer { get; set; }
+        public string? Type { get; set; }
+        public string? PaymentTypes { get; set; }
+        public string? Location { get; set; }
+        public string? Address { get; set; }
+        public string? Country { get; set; }
+        public DateTime? ManufactureDate { get; set; }
+        public DateTime? CommissioningDate { get; set; }
+        public DateTime? LastVerificationDate { get; set; }
+        public int? VerificationIntervalMonths { get; set; }
+        public DateTime? NextVerificationDate { get; set; }
+        public int? ResourceHours { get; set; }
+        public int? CurrentHours { get; set; }
+        public DateTime? NextMaintenanceDate { get; set; }
+        public int? MaintenanceDurationHours { get; set; }
+        public string? Status { get; set; }
+        public string? StatusText { get; set; }
+        public decimal? TotalRevenue { get; set; }
+        public DateTime? LastInventoryDate { get; set; }
+        public string? LastVerificationBy { get; set; }
+        public string? Franchisee { get; set; }
+        public DateTime? CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+    }
+
+    public record BulkStatusUpdateDto
+    (
+        List<Guid> Ids,
+        string? Status,
+         string? StatusText
+    );
+    public record VendingMachineCsvDto
+    (
+        string? SerialNumber,
+        string? InventoryNumber,
+        string? Model,
+        string? Manufacturer,
+        string? Type,
+        string? PaymentTypes,
+        string? Location,
+        string? Address,
+        string? Country,
+        DateTime? ManufactureDate,
+        DateTime? CommissioningDate,
+        DateTime? LastVerificationDate,
+        int? VerificationIntervalMonths,
+        int? ResourceHours,
+        int? CurrentHours,
+        DateTime? NextMaintenanceDate,
+        int? MaintenanceDurationHours,
+        string? Status,
+        string? StatusText,
+        decimal? TotalRevenue,
+        DateTime? LastInventoryDate,
+        string? LastVerificationBy,
+        string? Franchisee
+    );
 }

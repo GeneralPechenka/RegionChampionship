@@ -13,7 +13,9 @@
         }
       ],
       "UpstreamPathTemplate": "/Auth/{everything}",
-      "UpstreamHttpMethod": ["POST"]
+      "UpstreamHttpMethod": [ "POST", "OPTIONS" ],
+      "CorsPolicy": "AllowAll",
+      "Preflight": true // Явное разрешение preflight
     },
     {
       "DownstreamPathTemplate": "/api/Core/{everything}",
@@ -25,7 +27,7 @@
         }
       ],
       "UpstreamPathTemplate": "/Core/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ]
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ]
     }
   ]
 }

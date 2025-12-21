@@ -1,11 +1,15 @@
 ﻿using AutoMapper;
+using CsvHelper;
+using CsvHelper.Configuration;
 using Database;
 using Domain.Entities;
+using Domain.Enums;
 using DTOs.Core;
 using DTOs.General;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace CoreService.Controllers
 {
@@ -302,6 +306,581 @@ namespace CoreService.Controllers
                 _logger.LogError(ex, "Ошибка при удалении вендингового аппарата с ID {Id}", id);
                 return StatusCode(500, "Внутренняя ошибка сервера");
             }
+        }
+        //////////////////////////////////////////////////////////////////////////////
+        ///
+                // GET: api/vendingmachines/search?model=...&status=...&serialNumber=...
+        [HttpGet("search")]
+        public async Task<ActionResult> SearchVendingMachines(
+            [FromQuery] string? model,
+            [FromQuery] MachineStatusEnum? status,
+            [FromQuery] string? serialNumber,
+            [FromQuery] string? inventoryNumber,
+            [FromQuery] string? manufacturer,
+            [FromQuery] DateTime? fromDate,
+            [FromQuery] DateTime? toDate,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            try
+            {
+                // Валидация параметров
+                if (page < 1) page = 1;
+                if (pageSize < 1 || pageSize > 100) pageSize = 20;
+
+                var query = _context.VendingMachines
+                    .Include(v => v.Company)
+                    .Include(v => v.Modem)
+                    .AsNoTracking();
+
+                // Применяем фильтры
+                if (!string.IsNullOrEmpty(model))
+                    query = query.Where(v => v.Model != null && v.Model.Contains(model));
+
+                if (status.HasValue)
+                    query = query.Where(v => v.Status == status);
+
+                if (!string.IsNullOrEmpty(serialNumber))
+                    query = query.Where(v => v.SerialNumber != null && v.SerialNumber.Contains(serialNumber));
+
+                if (!string.IsNullOrEmpty(inventoryNumber))
+                    query = query.Where(v => v.InventoryNumber != null && v.InventoryNumber.Contains(inventoryNumber));
+
+                if (!string.IsNullOrEmpty(manufacturer))
+                    query = query.Where(v => v.Manufacturer != null && v.Manufacturer.Contains(manufacturer));
+
+                
+
+                if (fromDate.HasValue)
+                    query = query.Where(v => v.CommissioningDate >= fromDate.Value);
+
+                if (toDate.HasValue)
+                    query = query.Where(v => v.CommissioningDate <= toDate.Value);
+
+                var totalCount = await query.CountAsync();
+
+                if (totalCount == 0)
+                {
+                    return Ok(new PagedResponse<VendingMachineShortDto>
+                    {
+                        Items = new List<VendingMachineShortDto>(),
+                        Page = page,
+                        PageSize = pageSize,
+                        TotalCount = 0
+                    });
+                }
+
+                var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+                if (page > totalPages) page = totalPages;
+
+                var items = await query
+                    .OrderBy(v => v.Name)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                var result = _mapper.Map<List<VendingMachineShortDto>>(items);
+
+                return Ok(new PagedResponse<VendingMachineShortDto>
+                {
+                    Items = result,
+                    Page = page,
+                    PageSize = pageSize,
+                    TotalCount = totalCount
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка при поиске вендинговых аппаратов");
+                return StatusCode(500, "Внутренняя ошибка сервера");
+            }
+        }
+
+        // POST: api/vendingmachines/import
+        [HttpPost("import")]
+        public async Task<ActionResult> ImportFromCsv(IFormFile file)
+        {
+            try
+            {
+                if (file == null || file.Length == 0)
+                    return BadRequest("Файл не предоставлен");
+
+                if (Path.GetExtension(file.FileName).ToLower() != ".csv")
+                    return BadRequest("Поддерживаются только CSV файлы");
+
+                var importedMachines = new List<VendingMachine>();
+                var errors = new List<string>();
+                var rowNumber = 0;
+
+                using (var reader = new StreamReader(file.OpenReadStream()))
+                using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+                {
+                    // Конфигурация для CSV
+                    csv.Context.RegisterClassMap<VendingMachineCsvMap>();
+
+                    await foreach (var record in csv.GetRecordsAsync<VendingMachineCsvDto>())
+                    {
+                        rowNumber++;
+
+                        try
+                        {
+                            // Валидация записи
+                            if (string.IsNullOrEmpty(record.SerialNumber))
+                            {
+                                errors.Add($"Строка {rowNumber}: Отсутствует серийный номер");
+                                continue;
+                            }
+
+                            if (await _context.VendingMachines.AnyAsync(v => v.SerialNumber == record.SerialNumber))
+                            {
+                                errors.Add($"Строка {rowNumber}: Аппарат с серийным номером {record.SerialNumber} уже существует");
+                                continue;
+                            }
+
+                            // Преобразование записи в сущность
+                            var machine = _mapper.Map<VendingMachine>(record);
+                            machine.Id = Guid.NewGuid();
+                            machine.CreatedAt = DateTime.UtcNow;
+                            machine.ManufactureDate = DateTime.UtcNow;
+
+                            // Расчет даты следующей поверки
+                            if (record.LastVerificationDate.HasValue && record.VerificationIntervalMonths.HasValue)
+                            {
+                                machine.NextVerificationDate = record.LastVerificationDate.Value
+                                    .AddMonths(record.VerificationIntervalMonths.Value);
+                            }
+
+                            importedMachines.Add(machine);
+                        }
+                        catch (Exception ex)
+                        {
+                            errors.Add($"Строка {rowNumber}: Ошибка обработки - {ex.Message}");
+                        }
+                    }
+                }
+
+                // Сохранение успешно обработанных записей
+                if (importedMachines.Any())
+                {
+                    await _context.VendingMachines.AddRangeAsync(importedMachines);
+                    await _context.SaveChangesAsync();
+                }
+
+                return Ok(new
+                {
+                    SuccessCount = importedMachines.Count,
+                    ErrorCount = errors.Count,
+                    Errors = errors,
+                    Message = $"Импортировано {importedMachines.Count} аппаратов, ошибок: {errors.Count}"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка при импорте CSV файла");
+                return StatusCode(500, "Ошибка импорта данных");
+            }
+        }
+
+        // GET: api/vendingmachines/export
+        [HttpGet("export")]
+        public async Task<ActionResult> ExportToCsv([FromQuery] string? ids = null)
+        {
+            try
+            {
+                IQueryable<VendingMachine> query = _context.VendingMachines
+                    .Include(v => v.Company)
+                    .Include(v => v.ProducerCountry)
+                    .Include(v => v.LastVerificationEmployee)
+                    .AsNoTracking();
+
+                // Фильтрация по IDs если переданы
+                if (!string.IsNullOrEmpty(ids))
+                {
+                    var idList = ids.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(id => Guid.TryParse(id, out var guid) ? guid : Guid.Empty)
+                        .Where(id => id != Guid.Empty)
+                        .ToList();
+
+                    if (idList.Any())
+                    {
+                        query = query.Where(v => idList.Contains(v.Id));
+                    }
+                }
+
+                var machines = await query.ToListAsync();
+                var records = _mapper.Map<List<VendingMachineExportDto>>(machines);
+
+                // Генерация CSV
+                using (var memoryStream = new MemoryStream())
+                using (var writer = new StreamWriter(memoryStream))
+                using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+                {
+                    csv.WriteRecords(records);
+                    writer.Flush();
+                    memoryStream.Position = 0;
+
+                    var fileName = $"vending-machines-export-{DateTime.Now:yyyyMMdd-HHmmss}.csv";
+                    return File(memoryStream.ToArray(), "text/csv", fileName);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка при экспорте в CSV");
+                return StatusCode(500, "Ошибка экспорта данных");
+            }
+        }
+
+        // GET: api/vendingmachines/statistics
+        [HttpGet("statistics")]
+        public async Task<ActionResult> GetStatistics()
+        {
+            try
+            {
+                var totalCount = await _context.VendingMachines.CountAsync();
+                var activeCount = await _context.VendingMachines.CountAsync(v => v.Status == MachineStatusEnum.Working);
+                var maintenanceCount = await _context.VendingMachines.CountAsync(v => v.Status == MachineStatusEnum.UnderMaintenance);
+                var inactiveCount = await _context.VendingMachines.CountAsync(v => v.Status == MachineStatusEnum.OutOfService);
+
+                var totalRevenue = await _context.VendingMachines.SumAsync(v => v.TotalRevenue);
+                var avgRevenue = totalCount > 0 ? totalRevenue / totalCount : 0;
+
+                // Аппараты, требующие поверки (в течение месяца)
+                var verificationDue = await _context.VendingMachines
+                    .Where(v => v.NextVerificationDate.HasValue &&
+                               v.NextVerificationDate <= DateTime.UtcNow.AddMonths(1))
+                    .CountAsync();
+
+                // Аппараты, требующие обслуживания
+                var maintenanceDue = await _context.VendingMachines
+                    .Where(v => v.NextMaintenanceDate.HasValue &&
+                               v.NextMaintenanceDate <= DateTime.UtcNow.AddDays(30))
+                    .CountAsync();
+
+                // Распределение по производителям
+                var manufacturerDistribution = await _context.VendingMachines
+                    .GroupBy(v => v.Manufacturer)
+                    .Select(g => new
+                    {
+                        Manufacturer = g.Key,
+                        Count = g.Count()
+                    })
+                    .OrderByDescending(x => x.Count)
+                    .Take(10)
+                    .ToListAsync();
+
+                return Ok(new
+                {
+                    Summary = new
+                    {
+                        TotalCount = totalCount,
+                        ActiveCount = activeCount,
+                        MaintenanceCount = maintenanceCount,
+                        InactiveCount = inactiveCount
+                    },
+                    Revenue = new
+                    {
+                        Total = totalRevenue,
+                        Average = avgRevenue
+                    },
+                    Upcoming = new
+                    {
+                        VerificationDue = verificationDue,
+                        MaintenanceDue = maintenanceDue
+                    },
+
+                    TopManufacturers = manufacturerDistribution,
+                    LastUpdated = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка при получении статистики");
+                return StatusCode(500, "Ошибка получения статистики");
+            }
+        }
+
+        // GET: api/vendingmachines/check-serial/{serialNumber}
+        [HttpGet("check-serial/{serialNumber}")]
+        public async Task<ActionResult> CheckSerialNumber(string serialNumber, [FromQuery] Guid? excludeId = null)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(serialNumber))
+                    return BadRequest("Серийный номер не указан");
+
+                var query = _context.VendingMachines
+                    .Where(v => v.SerialNumber == serialNumber);
+
+                if (excludeId.HasValue)
+                {
+                    query = query.Where(v => v.Id != excludeId.Value);
+                }
+
+                var exists = await query.AnyAsync();
+
+                return Ok(new
+                {
+                    SerialNumber = serialNumber,
+                    Exists = exists,
+                    Message = exists
+                        ? "Серийный номер уже используется"
+                        : "Серийный номер доступен"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка при проверке серийного номера {SerialNumber}", serialNumber);
+                return StatusCode(500, "Ошибка проверки серийного номера");
+            }
+        }
+
+        // GET: api/vendingmachines/by-serial/{serialNumber}
+        [HttpGet("by-serial/{serialNumber}")]
+        public async Task<ActionResult> GetBySerialNumber(string serialNumber)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(serialNumber))
+                    return BadRequest("Серийный номер не указан");
+
+                var machine = await _context.VendingMachines
+                    .Include(v => v.Company)
+                    .Include(v => v.Modem)
+                    .Include(v => v.ProducerCountry)
+                    .Include(v => v.LastVerificationEmployee)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(v => v.SerialNumber == serialNumber);
+
+                if (machine == null)
+                {
+                    _logger.LogWarning("Аппарат с серийным номером {SerialNumber} не найден", serialNumber);
+                    return NotFound(new { Message = $"Аппарат с серийным номером {serialNumber} не найден" });
+                }
+
+                var dto = _mapper.Map<VendingMachineDetailsDto>(machine);
+                return Ok(dto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка при поиске аппарата по серийному номеру {SerialNumber}", serialNumber);
+                return StatusCode(500, "Внутренняя ошибка сервера");
+            }
+        }
+
+        // GET: api/vendingmachines/due-for-verification
+        [HttpGet("due-for-verification")]
+        public async Task<ActionResult> GetMachinesDueForVerification(
+            [FromQuery] int daysThreshold = 30,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            try
+            {
+                var thresholdDate = DateTime.UtcNow.AddDays(daysThreshold);
+
+                var query = _context.VendingMachines
+                    .Include(v => v.Company)
+                    .Where(v => v.NextVerificationDate.HasValue &&
+                               v.NextVerificationDate <= thresholdDate &&
+                               v.Status ==MachineStatusEnum.Working)
+                    .OrderBy(v => v.NextVerificationDate)
+                    .AsNoTracking();
+
+                var totalCount = await query.CountAsync();
+
+                if (totalCount == 0)
+                {
+                    return Ok(new PagedResponse<VendingMachineShortDto>
+                    {
+                        Items = new List<VendingMachineShortDto>(),
+                        Page = page,
+                        PageSize = pageSize,
+                        TotalCount = 0
+                    });
+                }
+
+                var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+                if (page > totalPages) page = totalPages;
+
+                var items = await query
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                var result = _mapper.Map<List<VendingMachineShortDto>>(items);
+
+                return Ok(new PagedResponse<VendingMachineShortDto>
+                {
+                    Items = result,
+                    Page = page,
+                    PageSize = pageSize,
+                    TotalCount = totalCount
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка при получении аппаратов, требующих поверки");
+                return StatusCode(500, "Внутренняя ошибка сервера");
+            }
+        }
+
+        // GET: api/vendingmachines/due-for-maintenance
+        [HttpGet("due-for-maintenance")]
+        public async Task<ActionResult> GetMachinesDueForMaintenance(
+            [FromQuery] int daysThreshold = 30,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            try
+            {
+                var thresholdDate = DateTime.UtcNow.AddDays(daysThreshold);
+
+                var query = _context.VendingMachines
+                    .Include(v => v.Company)
+                    .Where(v => v.NextMaintenanceDate.HasValue &&
+                               v.NextMaintenanceDate <= thresholdDate &&
+                               v.Status ==MachineStatusEnum.Working)
+                    .OrderBy(v => v.NextMaintenanceDate)
+                    .AsNoTracking();
+
+                var totalCount = await query.CountAsync();
+
+                if (totalCount == 0)
+                {
+                    return Ok(new PagedResponse<VendingMachineShortDto>
+                    {
+                        Items = new List<VendingMachineShortDto>(),
+                        Page = page,
+                        PageSize = pageSize,
+                        TotalCount = 0
+                    });
+                }
+
+                var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+                if (page > totalPages) page = totalPages;
+
+                var items = await query
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                var result = _mapper.Map<List<VendingMachineShortDto>>(items);
+
+                return Ok(new PagedResponse<VendingMachineShortDto>
+                {
+                    Items = result,
+                    Page = page,
+                    PageSize = pageSize,
+                    TotalCount = totalCount
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка при получении аппаратов, требующих обслуживания");
+                return StatusCode(500, "Внутренняя ошибка сервера");
+            }
+        }
+
+        // PATCH: api/vendingmachines/bulk-status
+        [HttpPatch("bulk-status")]
+        public async Task<ActionResult> UpdateBulkStatus([FromBody] BulkStatusUpdateDto dto)
+        {
+            try
+            {
+                
+                if (dto == null || dto.Ids == null || !dto.Ids.Any())
+                    return BadRequest("Не указаны ID аппаратов");
+
+                if (string.IsNullOrEmpty(dto.Status))
+                    return BadRequest("Не указан новый статус");
+
+                var validStatuses = new[] { "active", "maintenance", "inactive", "out_of_order" };
+                if (!validStatuses.Contains(dto.Status))
+                    return BadRequest($"Недопустимый статус. Допустимые значения: {string.Join(", ", validStatuses)}");
+
+                var machines = await _context.VendingMachines
+                    .Where(v => dto.Ids.Contains(v.Id))
+                    .ToListAsync();
+
+                if (!machines.Any())
+                    return NotFound("Аппараты не найдены");
+
+                foreach (var machine in machines)
+                {
+                    machine.Status = (MachineStatusEnum)int.Parse(dto.Status);
+                    machine.LastVerificationDate = DateTime.UtcNow;
+                }
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Обновлен статус {Status} для {Count} аппаратов", dto.Status, machines.Count);
+                return Ok(new
+                {
+                    UpdatedCount = machines.Count,
+                    Message = $"Обновлен статус для {machines.Count} аппаратов"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка при массовом обновлении статусов");
+                return StatusCode(500, "Ошибка обновления статусов");
+            }
+        }
+    }
+    public class VendingMachineCsvRecord
+    {
+        public string? SerialNumber { get; set; }
+        public string? InventoryNumber { get; set; }
+        public string? Model { get; set; }
+        public string? Manufacturer { get; set; }
+        public string? Type { get; set; }
+        public string? PaymentTypes { get; set; }
+        public string? Location { get; set; }
+        public string? Address { get; set; }
+        public string? Country { get; set; }
+        public DateTime? ManufactureDate { get; set; }
+        public DateTime? CommissioningDate { get; set; }
+        public DateTime? LastVerificationDate { get; set; }
+        public int? VerificationIntervalMonths { get; set; }
+        public int? ResourceHours { get; set; }
+        public int? CurrentHours { get; set; }
+        public DateTime? NextMaintenanceDate { get; set; }
+        public int? MaintenanceDurationHours { get; set; }
+        public string? Status { get; set; }
+        public string? StatusText { get; set; }
+        public decimal? TotalRevenue { get; set; }
+        public DateTime? LastInventoryDate { get; set; }
+        public string? LastVerificationBy { get; set; }
+        public string? Franchisee { get; set; }
+    }
+
+    public class VendingMachineCsvMap : ClassMap<VendingMachineCsvRecord>
+    {
+        public VendingMachineCsvMap()
+        {
+            Map(m => m.SerialNumber).Name("serialNumber");
+            Map(m => m.InventoryNumber).Name("inventoryNumber");
+            Map(m => m.Model).Name("model");
+            Map(m => m.Manufacturer).Name("manufacturer");
+            Map(m => m.Type).Name("type");
+            Map(m => m.PaymentTypes).Name("paymentTypes");
+            Map(m => m.Location).Name("location");
+            Map(m => m.Address).Name("address");
+            Map(m => m.Country).Name("country");
+            Map(m => m.ManufactureDate).Name("productionDate").TypeConverterOption.Format("yyyy-MM-dd");
+            Map(m => m.CommissioningDate).Name("commissioningDate").TypeConverterOption.Format("yyyy-MM-dd");
+            Map(m => m.LastVerificationDate).Name("lastVerification").TypeConverterOption.Format("yyyy-MM-dd");
+            Map(m => m.VerificationIntervalMonths).Name("verificationInterval");
+            Map(m => m.ResourceHours).Name("resourceHours");
+            Map(m => m.CurrentHours).Name("currentHours");
+            Map(m => m.NextMaintenanceDate).Name("nextMaintenance").TypeConverterOption.Format("yyyy-MM-dd");
+            Map(m => m.MaintenanceDurationHours).Name("maintenanceTime");
+            Map(m => m.Status).Name("status");
+            Map(m => m.StatusText).Name("statusText");
+            Map(m => m.TotalRevenue).Name("totalRevenue");
+            Map(m => m.LastInventoryDate).Name("lastInventory").TypeConverterOption.Format("yyyy-MM-dd");
+            Map(m => m.LastVerificationBy).Name("lastVerificationBy");
+            Map(m => m.Franchisee).Name("franchisee");
         }
     }
 }
