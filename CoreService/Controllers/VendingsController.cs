@@ -21,16 +21,16 @@ namespace CoreService.Controllers
         private readonly IMapper _mapper;
         private readonly ILogger<VendingsController> _logger;
 
-        public VendingsController(AppDbContext context, IMapper mapper, ILogger<VendingsController> logger)
+        public VendingsController(AppDbContext context, ILogger<VendingsController> logger)
         {
             _context = context;
-            _mapper = mapper;
+            //_mapper = mapper;
             _logger = logger;
         }
 
         // GET: api/vendingmachines (список для таблицы)
         [HttpGet]
-        public async Task<ActionResult> GetVendingMachines(
+        public async Task<ActionResult> GetVendingMachines( CancellationToken cancellation,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 20)
         {
@@ -45,7 +45,7 @@ namespace CoreService.Controllers
                     .Include(v => v.Modem)
                     .AsNoTracking();
 
-                var totalCount = await query.CountAsync();
+                var totalCount = query.Count();
 
                 // Проверка на пустой результат
                 if (totalCount == 0)
@@ -67,10 +67,20 @@ namespace CoreService.Controllers
                     .OrderBy(v => v.Name)
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
-                    .ToListAsync();
+                    .ToListAsync(cancellation);
 
-                var result = _mapper.Map<List<VendingMachineShortDto>>(items);
-
+                //var result = _mapper.Map<List<VendingMachineShortDto>>(items);
+                var result = items.Select(e => new VendingMachineShortDto(
+                    Id: e.Id,
+                    Name: e.Name,
+                    Model: e.Model,
+                    Location: e.Location,
+                    SerialNumber: e.SerialNumber,
+                    Status: e.Status.ToStringRu(),
+                    CompanyName: e.Company?.Name ?? string.Empty, // или null
+                    ModemNumber: e.Modem?.Imei ?? string.Empty,    // или null
+                    NextMaintenanceDate: e.NextMaintenanceDate
+                )).ToList();
                 var response = new PagedResponse<VendingMachineShortDto>
                 {
                     Items = result,
@@ -110,8 +120,37 @@ namespace CoreService.Controllers
                     _logger.LogWarning("Вендинговый аппарат с ID {Id} не найден", id);
                     return NotFound(new { Message = $"Вендинговый аппарат с ID {id} не найден" });
                 }
+                var dto = new VendingMachineDetailsDto()
+                {
+                    Id = machine.Id,
+                    Name = machine.Name,
+                    Location = machine.Location,
+                    Address = machine.Address,
+                    Model = machine.Model,
+                    TotalRevenue = machine.TotalRevenue,
+                    SerialNumber = machine.SerialNumber,
+                    InventoryNumber = machine.InventoryNumber,
+                    Manufacturer = machine.Manufacturer,
+                    ManufactureDate = machine.ManufactureDate,
+                    CommissioningDate = machine.CommissioningDate,
+                    LastVerificationDate = machine.LastVerificationDate,
+                    VerificationIntervalMonths = machine.VerificationIntervalMonths,
+                    NextVerificationDate = machine.NextVerificationDate,
+                    ResourceHours = machine.ResourceHours,
+                    NextMaintenanceDate = machine.NextMaintenanceDate,
+                    MaintenanceDurationHours = machine.MaintenanceDurationHours,
+                    Status = machine.Status.ToStringRu(),
+                    InventoryDate = machine.InventoryDate,
+                    CreatedAt = machine.CreatedAt,
 
-                var dto = _mapper.Map<VendingMachineDetailsDto>(machine);
+                    // Навигационные свойства с проверкой на null
+                    CompanyName = machine.Company?.Name ?? string.Empty,
+                    ModemImei = machine.Modem?.Imei ?? string.Empty,
+                    ModemProvider = machine.Modem?.Provider ?? string.Empty,
+                    CountryName = machine.ProducerCountry?.Name ?? string.Empty,
+                    LastVerifiedBy = machine.LastVerificationEmployee?.FullName ?? string.Empty
+                };
+                //var dto = _mapper.Map<VendingMachineDetailsDto>(machine);
                 return Ok(dto);
             }
             catch (Exception ex)
@@ -398,7 +437,7 @@ namespace CoreService.Controllers
 
         // POST: api/vendingmachines/import
         [HttpPost("import")]
-        public async Task<ActionResult> ImportFromCsv(IFormFile file)
+        public async Task<ActionResult> ImportFromCsv(IFormFile file, CancellationToken cancellation)
         {
             try
             {
@@ -412,13 +451,24 @@ namespace CoreService.Controllers
                 var errors = new List<string>();
                 var rowNumber = 0;
 
-                using (var reader = new StreamReader(file.OpenReadStream()))
-                using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+                var config = new CsvConfiguration(CultureInfo.InvariantCulture)
                 {
-                    // Конфигурация для CSV
+                    HasHeaderRecord = true,
+                    HeaderValidated = null, // Отключаем проверку заголовков
+                    MissingFieldFound = null, // Отключаем проверку отсутствующих полей
+                    PrepareHeaderForMatch = args => args.Header.ToLower() // Приводим к нижнему регистру
+                };
+
+                using (var reader = new StreamReader(file.OpenReadStream()))
+                using (var csv = new CsvReader(reader, config))
+                {
+                    // Регистрируем маппинг
                     csv.Context.RegisterClassMap<VendingMachineCsvMap>();
 
-                    await foreach (var record in csv.GetRecordsAsync<VendingMachineCsvDto>())
+                    // Читаем записи
+                    var records = csv.GetRecordsAsync<VendingMachineCsvDto>(cancellation);
+                    
+                    await foreach (var record in records)
                     {
                         rowNumber++;
 
@@ -438,10 +488,43 @@ namespace CoreService.Controllers
                             }
 
                             // Преобразование записи в сущность
-                            var machine = _mapper.Map<VendingMachine>(record);
-                            machine.Id = Guid.NewGuid();
-                            machine.CreatedAt = DateTime.UtcNow;
-                            machine.ManufactureDate = DateTime.UtcNow;
+                            //var machine = _mapper.Map<VendingMachine>(record);
+                            var machine = new VendingMachine()
+                            {
+                                Name = record.Name,
+                                Location = record.Location,
+                                Address = record.Address,
+                                InventoryNumber = record.InventoryNumber,
+                                SerialNumber = record.SerialNumber,
+                                Model = record.Model ?? "Не указана",
+                                Manufacturer = record.Manufacturer ?? "Не указан",
+                                ManufactureDate = record.ManufactureDate ?? record.ProductionDate ?? DateTime.UtcNow,
+                                CommissioningDate = record.CommissioningDate ?? DateTime.UtcNow,
+                                LastVerificationDate = record.LastVerificationDate,
+                                InventoryDate = record.LastInventoryDate,
+
+                                // ВАЖНО: Либо null, либо дата в БУДУЩЕМ
+                                NextMaintenanceDate = record.NextMaintenanceDate.HasValue
+                                ? (record.NextMaintenanceDate > DateTime.UtcNow
+                                    ? record.NextMaintenanceDate
+                                    : DateTime.UtcNow.AddDays(1)) // Если дата в прошлом - ставим завтра
+                                : null, // Или просто null
+
+                                ResourceHours = record.ResourceHours ?? 0,
+                                MaintenanceDurationHours = record.MaintenanceDurationHours ?? 0,
+                                VerificationIntervalMonths = record.VerificationIntervalMonths,
+                                TotalRevenue = record.TotalRevenue ?? 0,
+                                Status = ParseMachineStatus(record.Status),
+
+                                // Системные поля - ВАЖНО: CreatedAt будет установлен базой
+                                //Id = Guid.NewGuid(),
+                                // CreatedAt = DateTime.UtcNow // НЕ УСТАНАВЛИВАЙТЕ ВРУЧНУЮ, пусть БД сама ставит
+                            };
+
+
+                            // Если нет даты изготовления, ставим текущую
+                            if (!record.ProductionDate.HasValue)
+                                machine.ManufactureDate = DateTime.UtcNow;
 
                             // Расчет даты следующей поверки
                             if (record.LastVerificationDate.HasValue && record.VerificationIntervalMonths.HasValue)
@@ -450,6 +533,7 @@ namespace CoreService.Controllers
                                     .AddMonths(record.VerificationIntervalMonths.Value);
                             }
 
+                            await _context.VendingMachines.AddAsync(machine, cancellation);
                             importedMachines.Add(machine);
                         }
                         catch (Exception ex)
@@ -460,12 +544,12 @@ namespace CoreService.Controllers
                 }
 
                 // Сохранение успешно обработанных записей
-                if (importedMachines.Any())
-                {
-                    await _context.VendingMachines.AddRangeAsync(importedMachines);
-                    await _context.SaveChangesAsync();
-                }
-
+                //if (importedMachines.Any())
+                //{
+                //    //await _context.VendingMachines.AddRangeAsync(importedMachines, cancellation);
+                //    await _context.SaveChangesAsync(cancellation);
+                //}
+                await _context.SaveChangesAsync(cancellation);
                 return Ok(new
                 {
                     SuccessCount = importedMachines.Count,
@@ -532,29 +616,29 @@ namespace CoreService.Controllers
 
         // GET: api/vendingmachines/statistics
         [HttpGet("statistics")]
-        public async Task<ActionResult> GetStatistics()
+        public async Task<ActionResult> GetStatistics(CancellationToken cancellation)
         {
             try
             {
-                var totalCount = await _context.VendingMachines.CountAsync();
-                var activeCount = await _context.VendingMachines.CountAsync(v => v.Status == MachineStatusEnum.Working);
-                var maintenanceCount = await _context.VendingMachines.CountAsync(v => v.Status == MachineStatusEnum.UnderMaintenance);
-                var inactiveCount = await _context.VendingMachines.CountAsync(v => v.Status == MachineStatusEnum.OutOfService);
+                var totalCount = await _context.VendingMachines.CountAsync(cancellation);
+                var activeCount = await _context.VendingMachines.CountAsync(v => v.Status == MachineStatusEnum.Working, cancellation);
+                var maintenanceCount = await _context.VendingMachines.CountAsync(v => v.Status == MachineStatusEnum.UnderMaintenance, cancellation);
+                var inactiveCount = await _context.VendingMachines.CountAsync(v => v.Status == MachineStatusEnum.OutOfService, cancellation);
 
-                var totalRevenue = await _context.VendingMachines.SumAsync(v => v.TotalRevenue);
+                var totalRevenue = await _context.VendingMachines.SumAsync(v => v.TotalRevenue, cancellation);
                 var avgRevenue = totalCount > 0 ? totalRevenue / totalCount : 0;
 
                 // Аппараты, требующие поверки (в течение месяца)
                 var verificationDue = await _context.VendingMachines
                     .Where(v => v.NextVerificationDate.HasValue &&
                                v.NextVerificationDate <= DateTime.UtcNow.AddMonths(1))
-                    .CountAsync();
+                    .CountAsync(cancellation);
 
                 // Аппараты, требующие обслуживания
                 var maintenanceDue = await _context.VendingMachines
                     .Where(v => v.NextMaintenanceDate.HasValue &&
                                v.NextMaintenanceDate <= DateTime.UtcNow.AddDays(30))
-                    .CountAsync();
+                    .CountAsync(cancellation);
 
                 // Распределение по производителям
                 var manufacturerDistribution = await _context.VendingMachines
@@ -566,7 +650,7 @@ namespace CoreService.Controllers
                     })
                     .OrderByDescending(x => x.Count)
                     .Take(10)
-                    .ToListAsync();
+                    .ToListAsync(cancellation);
 
                 return Ok(new
                 {
@@ -825,6 +909,25 @@ namespace CoreService.Controllers
                 _logger.LogError(ex, "Ошибка при массовом обновлении статусов");
                 return StatusCode(500, "Ошибка обновления статусов");
             }
+        }
+        private MachineStatusEnum ParseMachineStatus(string status)
+        {
+            return status.ToLower() switch
+            {
+                "работает" => MachineStatusEnum.Working,
+                "исправен" => MachineStatusEnum.Working,
+                "working" => MachineStatusEnum.Working,
+                "active" => MachineStatusEnum.Working,
+                "сломан" => MachineStatusEnum.Broken,
+                "broken" => MachineStatusEnum.Broken,
+                "неисправен" => MachineStatusEnum.Broken,
+                "обслуживается" => MachineStatusEnum.UnderMaintenance,
+                "на обслуживании" => MachineStatusEnum.UnderMaintenance,
+                "maintenance" => MachineStatusEnum.UnderMaintenance,
+                "underMaintenance" => MachineStatusEnum.UnderMaintenance,
+                "выведен из строя" => MachineStatusEnum.OutOfService,
+                "outOfService" => MachineStatusEnum.OutOfService
+            };
         }
     }
     public class VendingMachineCsvRecord

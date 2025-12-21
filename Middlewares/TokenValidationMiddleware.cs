@@ -1,5 +1,7 @@
 ﻿using Interfaces;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Services;
 using System;
 using System.Collections.Generic;
@@ -36,9 +38,19 @@ namespace Middlewares
 
             // 2. Получаем токен из заголовка через сервис
             var token = _tokenHeaderService.GetTokenFromRequest(context.Request);
+            Console.WriteLine("TOKEN: "+token);
+            // ДОБАВЬТЕ ДЛЯ ОТЛАДКИ:
+            var logger = context.RequestServices.GetService<ILogger<TokenValidationMiddleware>>();
+
+            // Логируем что пришло в заголовке
+            var rawHeader = context.Request.Headers["X-Auth-Token"].FirstOrDefault();
+            logger?.LogDebug($"Raw X-Auth-Token header: {rawHeader}");
+            logger?.LogDebug($"Cleaned token: {token}");
+            logger?.LogDebug($"Token length: {token?.Length ?? 0}");
 
             if (string.IsNullOrEmpty(token))
             {
+                logger?.LogWarning("Token is null or empty after cleaning");
                 await ReturnUnauthorizedAsync(context, "Отсутствует токен доступа. Авторизуйтесь ещё раз.");
                 return;
             }
@@ -47,11 +59,12 @@ namespace Middlewares
             var validationResult = await _jwtTokenProvider.CheckExpireJwtTokenAsync(token);
             if (!validationResult)
             {
+                logger?.LogWarning("Token validation failed");
                 await ReturnUnauthorizedAsync(context, "Недействительный токен доступа. Авторизуйтесь ещё раз.");
                 return;
             }
 
-            // 5. Продолжаем выполнение
+            // 4. Продолжаем выполнение
             await _next(context);
         }
 

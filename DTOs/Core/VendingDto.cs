@@ -1,4 +1,5 @@
-﻿using Domain.Enums;
+﻿using CsvHelper.Configuration.Attributes;
+using Domain.Enums;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -9,21 +10,21 @@ using System.Threading.Tasks;
 namespace DTOs.Core
 {
     // Минимальный DTO для списка автоматов (таблица/плитка)
-    public class VendingMachineShortDto
-    {
-        public Guid Id { get; set; }
-        public string Name { get; set; }
-        public string Model { get; set; }
-        public string Location { get; set; }
-        public string SerialNumber { get; set; }
-        public MachineStatusEnum Status { get; set; }
-        public string CompanyName { get; set; }
-        public string ModemNumber { get; set; }
-        public DateTime? NextMaintenanceDate { get; set; }
-    }
+    public record VendingMachineShortDto
+    (
+        Guid Id,
+        string Name,
+        string Model,
+        string Location,
+        string SerialNumber,
+        string Status,
+        string CompanyName,
+        string ModemNumber,
+        DateTime? NextMaintenanceDate
+    );
 
     // DTO для создания/обновления (только то, что можно менять)
-    public class CreateUpdateVendingMachineDto
+    public record CreateUpdateVendingMachineDto
     {
         [Required]
         public string Name { get; set; }
@@ -55,7 +56,7 @@ namespace DTOs.Core
         public int ResourceHours { get; set; }
         public DateTime? NextMaintenanceDate { get; set; }
         public int MaintenanceDurationHours { get; set; }
-        public MachineStatusEnum Status { get; set; }
+        public string Status { get; set; }
         public Guid? CompanyId { get; set; }
         public Guid? ModemId { get; set; }
         public Guid? ProducerCountryId { get; set; }
@@ -82,7 +83,7 @@ namespace DTOs.Core
         public int ResourceHours { get; set; }
         public DateTime? NextMaintenanceDate { get; set; }
         public int MaintenanceDurationHours { get; set; }
-        public MachineStatusEnum Status { get; set; }
+        public string Status { get; set; }
         public DateTime? InventoryDate { get; set; }
         public DateTime CreatedAt { get; set; }
 
@@ -100,7 +101,7 @@ namespace DTOs.Core
         public Guid Id { get; set; }
         public string Name { get; set; }
         public string Location { get; set; }
-        public MachineStatusEnum Status { get; set; }
+        public string Status { get; set; }
         public string ConnectionStatus { get; set; } // Из API
         public string LoadingInfo { get; set; } // Из API
         public decimal CashAmount { get; set; } // Из API
@@ -146,29 +147,96 @@ namespace DTOs.Core
          string? StatusText
     );
     public record VendingMachineCsvDto
-    (
-        string? SerialNumber,
-        string? InventoryNumber,
-        string? Model,
-        string? Manufacturer,
-        string? Type,
-        string? PaymentTypes,
-        string? Location,
-        string? Address,
-        string? Country,
-        DateTime? ManufactureDate,
-        DateTime? CommissioningDate,
-        DateTime? LastVerificationDate,
-        int? VerificationIntervalMonths,
-        int? ResourceHours,
-        int? CurrentHours,
-        DateTime? NextMaintenanceDate,
-        int? MaintenanceDurationHours,
-        string? Status,
-        string? StatusText,
-        decimal? TotalRevenue,
-        DateTime? LastInventoryDate,
-        string? LastVerificationBy,
-        string? Franchisee
-    );
+    {
+        [Name("serialNumber")]
+        public string SerialNumber { get; init; } = string.Empty;
+
+        [Name("inventoryNumber")]
+        public string InventoryNumber { get; init; } = string.Empty;
+
+        [Name("model")]
+        public string Model { get; init; } = string.Empty;
+
+        [Name("manufacturer")]
+        public string Manufacturer { get; init; } = string.Empty;
+
+        [Name("type")]
+        public string Type { get; init; } = string.Empty;
+
+        [Name("paymentTypes")]
+        public string PaymentTypes { get; init; } = string.Empty;
+
+        [Name("location")]
+        public string Location { get; init; } = string.Empty;
+
+        [Name("address")]
+        public string Address { get; init; } = string.Empty;
+
+        [Name("country")]
+        public string Country { get; init; } = string.Empty;
+
+        [Name("productionDate")]
+        [Format("yyyy-MM-dd")]
+        public DateTime? ProductionDate { get; init; }
+
+        [Name("commissioningDate")]
+        [Format("yyyy-MM-dd")]
+        public DateTime? CommissioningDate { get; init; }
+
+        [Name("lastVerificationDate")]
+        [Format("yyyy-MM-dd")]
+        public DateTime? LastVerificationDate { get; init; }
+
+        [Name("verificationIntervalMonths")]
+        public int? VerificationIntervalMonths { get; init; }
+
+        [Name("resourceHours")]
+        public int? ResourceHours { get; init; }
+
+        [Name("currentHours")]
+        public int? CurrentHours { get; init; }
+
+        [Name("nextMaintenanceDate")]
+        [Format("yyyy-MM-dd")]
+        public DateTime? NextMaintenanceDate { get; init; }
+
+        [Name("maintenanceDurationHours")]
+        public int? MaintenanceDurationHours { get; init; }
+
+        [Name("status")]
+        public string Status { get; init; } = string.Empty;
+
+        [Name("totalRevenue")]
+        public decimal? TotalRevenue { get; init; }
+
+        [Name("lastInventoryDate")]
+        [Format("yyyy-MM-dd")]
+        public DateTime? LastInventoryDate { get; init; }
+
+        [Name("lastVerificationBy")]
+        public string LastVerificationBy { get; init; } = string.Empty;
+
+        [Name("franchisee")]
+        public string Franchisee { get; init; } = string.Empty;
+
+        [Name("name")]
+        public string Name { get; init; } = string.Empty;
+
+        [Name("modemImei")]
+        public string ModemImei { get; init; } = string.Empty;
+
+        [Name("modemProvider")]
+        public string ModemProvider { get; init; } = string.Empty;
+
+        [Name("companyName")]
+        public string CompanyName { get; init; } = string.Empty;
+
+        [Name("nextVerificationDate")]
+        [Format("yyyy-MM-dd")]
+        public DateTime? NextVerificationDate { get; init; }
+
+        [Name("manufactureDate")]
+        [Format("yyyy-MM-dd")]
+        public DateTime? ManufactureDate { get; init; }
+    }
 }
