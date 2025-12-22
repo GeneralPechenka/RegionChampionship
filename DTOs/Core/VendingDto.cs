@@ -111,33 +111,88 @@ namespace DTOs.Core
     }
     public class VendingMachineExportDto
     {
-        public string Id { get; set; } = null!;
-        public string SerialNumber { get; set; } = null!;
-        public string? InventoryNumber { get; set; }
-        public string? Model { get; set; }
-        public string? Manufacturer { get; set; }
-        public string? Type { get; set; }
-        public string? PaymentTypes { get; set; }
-        public string? Location { get; set; }
-        public string? Address { get; set; }
-        public string? Country { get; set; }
-        public DateTime? ManufactureDate { get; set; }
-        public DateTime? CommissioningDate { get; set; }
+        [Name("id")]
+        public Guid Id { get; set; }
+
+        [Name("serialNumber")]
+        public string SerialNumber { get; set; } = string.Empty;
+
+        [Name("inventoryNumber")]
+        public string InventoryNumber { get; set; } = string.Empty;
+
+        [Name("name")]
+        public string Name { get; set; } = string.Empty;
+
+        [Name("model")]
+        public string Model { get; set; } = string.Empty;
+
+        [Name("manufacturer")]
+        public string Manufacturer { get; set; } = string.Empty;
+
+        [Name("location")]
+        public string Location { get; set; } = string.Empty;
+
+        [Name("address")]
+        public string Address { get; set; } = string.Empty;
+
+        [Name("status")]
+        [Format("G")] // Для enum
+        public string Status { get; set; } = string.Empty;
+
+        [Name("companyName")]
+        public string CompanyName { get; set; } = string.Empty;
+
+        [Name("country")]
+        public string CountryName { get; set; } = string.Empty;
+
+        [Name("manufactureDate")]
+        [Format("yyyy-MM-dd")]
+        public DateTime ManufactureDate { get; set; }
+
+        [Name("commissioningDate")]
+        [Format("yyyy-MM-dd")]
+        public DateTime CommissioningDate { get; set; }
+
+        [Name("lastVerificationDate")]
+        [Format("yyyy-MM-dd")]
         public DateTime? LastVerificationDate { get; set; }
+
+        [Name("verificationIntervalMonths")]
         public int? VerificationIntervalMonths { get; set; }
+
+        [Name("nextVerificationDate")]
+        [Format("yyyy-MM-dd")]
         public DateTime? NextVerificationDate { get; set; }
-        public int? ResourceHours { get; set; }
-        public int? CurrentHours { get; set; }
+
+        [Name("resourceHours")]
+        public int ResourceHours { get; set; }
+
+        [Name("nextMaintenanceDate")]
+        [Format("yyyy-MM-dd")]
         public DateTime? NextMaintenanceDate { get; set; }
-        public int? MaintenanceDurationHours { get; set; }
-        public string? Status { get; set; }
-        public string? StatusText { get; set; }
-        public decimal? TotalRevenue { get; set; }
-        public DateTime? LastInventoryDate { get; set; }
-        public string? LastVerificationBy { get; set; }
-        public string? Franchisee { get; set; }
-        public DateTime? CreatedAt { get; set; }
-        public DateTime? UpdatedAt { get; set; }
+
+        [Name("maintenanceDurationHours")]
+        public int MaintenanceDurationHours { get; set; }
+
+        [Name("totalRevenue")]
+        public decimal TotalRevenue { get; set; }
+
+        [Name("inventoryDate")]
+        [Format("yyyy-MM-dd")]
+        public DateTime? InventoryDate { get; set; }
+
+        [Name("createdAt")]
+        [Format("yyyy-MM-dd HH:mm:ss")]
+        public DateTime CreatedAt { get; set; }
+
+        [Name("lastVerificationBy")]
+        public string LastVerificationBy { get; set; } = string.Empty;
+
+        [Name("modemImei")]
+        public string ModemImei { get; set; } = string.Empty;
+
+        [Name("modemProvider")]
+        public string ModemProvider { get; set; } = string.Empty;
     }
 
     public record BulkStatusUpdateDto

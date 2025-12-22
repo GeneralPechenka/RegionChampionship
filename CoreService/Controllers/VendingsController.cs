@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
+using System.Text;
 
 namespace CoreService.Controllers
 {
@@ -592,12 +593,45 @@ namespace CoreService.Controllers
                 }
 
                 var machines = await query.ToListAsync();
-                var records = _mapper.Map<List<VendingMachineExportDto>>(machines);
+                //var records = _mapper.Map<List<VendingMachineExportDto>>(machines);
+                var records = machines.Select(e => new VendingMachineExportDto()
+                {
+                    Id = e.Id,
+                    Name = e.Name,
+                    Location = e.Location,
+                    Address = e.Address,
+                    SerialNumber = e.SerialNumber,
+                    InventoryNumber = e.InventoryNumber,
+                    Model = e.Model,
+                    Manufacturer = e.Manufacturer,
+                    Status = e.Status.ToStringRu(), // Проверь, что этот метод не возвращает null
+                    CompanyName = e.Company?.Name ?? string.Empty, // Проверка на null
+                    CountryName = e.ProducerCountry?.Name ?? string.Empty, // Проверка на null
+                    ManufactureDate = e.ManufactureDate,
+                    CommissioningDate = e.CommissioningDate,
+                    LastVerificationDate = e.LastVerificationDate,
+                    VerificationIntervalMonths = e.VerificationIntervalMonths,
+                    NextVerificationDate = e.NextVerificationDate,
+                    ResourceHours = e.ResourceHours,
+                    TotalRevenue = e.TotalRevenue,
+                    InventoryDate = e.InventoryDate,
+                    LastVerificationBy = e.LastVerificationEmployee?.FullName ?? string.Empty, // Проверка на null
+                    ModemImei = e.Modem?.Imei ?? string.Empty, // Проверка на null
+                    ModemProvider = e.Modem?.Provider ?? string.Empty // Проверка на null
+                }).ToList(); //
 
+                var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+                {
+                    Delimiter = ",",
+                    HasHeaderRecord = true,
+                    Encoding = Encoding.UTF8,
+                    ShouldQuote = args => true // Всегда кавычки
+                    
+                };
                 // Генерация CSV
                 using (var memoryStream = new MemoryStream())
                 using (var writer = new StreamWriter(memoryStream))
-                using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+                using (var csv = new CsvWriter(writer,config))
                 {
                     csv.WriteRecords(records);
                     writer.Flush();
