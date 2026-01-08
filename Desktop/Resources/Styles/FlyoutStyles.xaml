@@ -1,0 +1,53 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<DataTemplate xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <Grid HeightRequest="50" Padding="20,0">
+
+        <!-- ФОН ВЫБРАННОГО ЭЛЕМЕНТА -->
+        <BoxView x:Name="SelectedBackground" 
+                 IsVisible="False" 
+                 BackgroundColor="#1E4BD9"
+                 HorizontalOptions="Fill"
+                 VerticalOptions="Fill"/>
+
+        <!-- КОНТЕНТ МЕНЮ -->
+        <HorizontalStackLayout Spacing="15" VerticalOptions="Center">
+            
+            <!-- ИКОНКА (эмодзи или картинка) -->
+            <Label Text="{Binding Icon}" 
+                   FontSize="18" 
+                   TextColor="White"
+                   VerticalOptions="Center"/>
+
+            <!-- ТЕКСТ ПУНКТА МЕНЮ -->
+            <Label Text="{Binding Title}" 
+                   FontSize="14" 
+                   TextColor="White" 
+                   VerticalOptions="Center"/>
+
+        </HorizontalStackLayout>
+
+        <!-- ВИЗУАЛЬНЫЕ СОСТОЯНИЯ ДЛЯ ВЫДЕЛЕНИЯ -->
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup x:Name="CommonStates">
+                <VisualState x:Name="Normal">
+                    <VisualState.Setters>
+                        <Setter TargetName="SelectedBackground" 
+                                Property="IsVisible" 
+                                Value="False"/>
+                    </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Selected">
+                    <VisualState.Setters>
+                        <Setter TargetName="SelectedBackground" 
+                                Property="IsVisible" 
+                                Value="True"/>
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+
+    </Grid>
+
+</DataTemplate>

@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="Desktop.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:local="clr-namespace:Desktop"
+    FlyoutBackgroundColor="#1D2127"
+    FlyoutHeaderBehavior="Fixed"   
+    FlyoutBehavior="Flyout"
+    
+    FlyoutWidth="250"
+    Title="Desktop">
+
+    <!-- ПОДКЛЮЧАЕМ СТИЛИ -->
+    <!--<Shell.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Resources/Styles/FlyoutStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Shell.Resources>-->
+
+    <!-- ПОДКЛЮЧАЕМ СТИЛИ -->
+
+    <!-- ШАБЛОН ПУНКТА МЕНЮ -->
+    <Shell.ItemTemplate>
+        <DataTemplate>
+            <!-- ПРОСТОЙ GRID С ТЕКСТОМ И ИКОНКОЙ -->
+            <Grid HeightRequest="50" Padding="15,0">
+                <HorizontalStackLayout Spacing="15" VerticalOptions="Center">
+                    <!-- ИКОНКА (текст или картинка) -->
+                    <Label Text="📊" 
+                           FontSize="18" 
+                           TextColor="White"
+                           VerticalOptions="Center"/>
+
+                    <!-- ТЕКСТ -->
+                    <Label Text="{Binding Title}" 
+                           FontSize="14" 
+                           TextColor="White" 
+                           VerticalOptions="Center"/>
+                </HorizontalStackLayout>
+
+                <!-- ПРОСТОЙ ФОН ПРИ ВЫБОРЕ -->
+                <VisualStateManager.VisualStateGroups>
+                    <VisualStateGroup x:Name="CommonStates">
+                        <VisualState x:Name="Normal">
+                            <VisualState.Setters>
+                                <Setter Property="BackgroundColor" Value="Transparent"/>
+                            </VisualState.Setters>
+                        </VisualState>
+                        <VisualState x:Name="Selected">
+                            <VisualState.Setters>
+                                <Setter Property="BackgroundColor" Value="#1E4BD9"/>
+                            </VisualState.Setters>
+                        </VisualState>
+                    </VisualStateGroup>
+                </VisualStateManager.VisualStateGroups>
+            </Grid>
+        </DataTemplate>
+    </Shell.ItemTemplate>
+
+    <!-- ШАПКА МЕНЮ -->
+    <Shell.FlyoutHeader>
+        <Grid HeightRequest="80" BackgroundColor="#1D2127">
+            <Label Text="Навигация"
+                   FontSize="20"
+                   FontAttributes="Bold"
+                   TextColor="White"
+                   VerticalOptions="Center"
+                   HorizontalOptions="Center"/>
+        </Grid>
+    </Shell.FlyoutHeader>
+
+    <!-- ПУНКТЫ МЕНЮ (просто текст) -->
+    <FlyoutItem Title="Главная">
+        <ShellContent Route="MainPage">
+            <ShellContent.Content>
+                <local:MainPage />
+            </ShellContent.Content>
+        </ShellContent>
+    </FlyoutItem>
+
+    <FlyoutItem Title="Монитор ТА">
+        <ShellContent>
+            <ContentPage>
+                <Label Text="Монитор ТА" 
+                       HorizontalOptions="Center" 
+                       VerticalOptions="Center"/>
+            </ContentPage>
+        </ShellContent>
+    </FlyoutItem>
+
+    <FlyoutItem Title="Детальные отчеты">
+        <ShellContent>
+            <ContentPage>
+                <Label Text="Детальные отчеты" 
+                       HorizontalOptions="Center" 
+                       VerticalOptions="Center"/>
+            </ContentPage>
+        </ShellContent>
+    </FlyoutItem>
+
+    <FlyoutItem Title="Учет ТМЦ">
+        <ShellContent>
+            <ContentPage>
+                <Label Text="Учет ТМЦ" 
+                       HorizontalOptions="Center" 
+                       VerticalOptions="Center"/>
+            </ContentPage>
+        </ShellContent>
+    </FlyoutItem>
+
+    <FlyoutItem Title="Администрирование">
+        <ShellContent>
+            <ContentPage>
+                <Label Text="Администрирование" 
+                       HorizontalOptions="Center" 
+                       VerticalOptions="Center"/>
+            </ContentPage>
+        </ShellContent>
+    </FlyoutItem>
+
+
+</Shell>
+
