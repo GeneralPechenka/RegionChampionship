@@ -1,45 +1,54 @@
-﻿using Microsoft.Maui.Controls;
+﻿using CommunityToolkit.Maui.Views;
+using DesktopApp.ContentViews;
+using Microsoft.Maui.Controls;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+
 
 namespace DesktopApp
 {
     public partial class MainPage : ContentPage
     {
         private bool _isExpanded = true;
-        private bool _isUserMenuOpen = false;
+        private bool _isDropdownOpened = false;
         private const double MenuWidth = 200;
         private Button _activeMenuButton;
 
+        private Dictionary<string, ContentView> _contentViews;
         public MainPage()
         {
+            
             InitializeComponent();
             MainGrid.ColumnDefinitions[0].Width = MenuWidth;
-
+            _contentViews = new()
+            {
+                ["Компании"] = new CompanyContentView(),
+                ["Торговые автоматы"] = new VendingContentView(),
+                ["Дополнительные"] = new NewContent1()
+            };
             // Настраиваем выпадающее меню
-            SetupUserDropdownMenu();
+            //SetupUserDropdownMenu();
 
             // Настраиваем hover-эффекты
             SetupMenuHoverEffects();
         }
 
-        private void SetupUserDropdownMenu()
-        {
-            // Закрытие меню при клике вне его
-            var tapGesture = new TapGestureRecognizer();
-            tapGesture.Tapped += async (s, e) =>
-            {
-                if (_isUserMenuOpen)
-                {
-                    await CloseUserMenu();
-                }
-            };
+        //private void SetupUserDropdownMenu()
+        //{
+        //    // Закрытие меню при клике вне его
+        //    var tapGesture = new TapGestureRecognizer();
+        //    tapGesture.Tapped += async (s, e) =>
+        //    {
+        //        if (_isUserMenuOpen)
+        //        {
+        //            await CloseUserMenu();
+        //        }
+        //    };
+        //    MainGrid.GestureRecognizers.Add(tapGesture);
 
-            MainGrid.GestureRecognizers.Add(tapGesture);
-
-            // Не закрывать при клике внутри меню
-            UserDropdownMenu.GestureRecognizers.Add(new TapGestureRecognizer());
-        }
+        //    // Не закрывать при клике внутри меню
+        //    UserDropdownMenu.GestureRecognizers.Add(new TapGestureRecognizer());
+        //}
 
         private void SetupMenuHoverEffects()
         {
@@ -52,8 +61,8 @@ namespace DesktopApp
 
         private List<Button> FindMenuButtons()
         {
+            
             var buttons = new List<Button>();
-
             if (MenuContainer != null)
             {
                 foreach (var child in MenuContainer.Children)
@@ -62,9 +71,16 @@ namespace DesktopApp
                     {
                         buttons.Add(button);
                     }
+                    
+                }
+                foreach (var item in AdminExpanderBody.Children)
+                {
+                    if (item is Button button)
+                    {
+                        buttons.Add(button);
+                    }
                 }
             }
-
             return buttons;
         }
 
@@ -74,12 +90,11 @@ namespace DesktopApp
 
             pointerRecognizer.PointerEntered += (s, e) =>
             {
-                // Используем Dispatcher для UI обновлений
                 Dispatcher.Dispatch(() =>
                 {
                     if (s is Button btn && btn != _activeMenuButton)
                     {
-                        btn.BackgroundColor = Color.FromArgb("#34495E");
+                        btn.BackgroundColor = Color.FromArgb("#181A1D");
                         btn.TextColor = Colors.White;
                     }
                 });
@@ -100,8 +115,7 @@ namespace DesktopApp
             button.GestureRecognizers.Add(pointerRecognizer);
         }
 
-        // ============ БОКОВОЕ МЕНЮ ============
-
+        // ===== БОКОВОЕ МЕНЮ =====
         private void ToggleMenu(object sender, EventArgs e)
         {
             var column = MainGrid.ColumnDefinitions[0];
@@ -118,7 +132,6 @@ namespace DesktopApp
             var animation = new Animation(
                 callback: v =>
                 {
-                    // Используем Dispatcher вместо Device.BeginInvokeOnMainThread
                     Dispatcher.Dispatch(() =>
                     {
                         column.Width = v;
@@ -130,10 +143,7 @@ namespace DesktopApp
                 easing: Easing.CubicInOut);
 
             // Запускаем анимацию
-            Dispatcher.Dispatch(() =>
-            {
-                MainGrid.Animate("ColumnWidth", animation, rate: 16, length: duration);
-            });
+            MainGrid.Animate("ColumnWidth", animation, rate: 16, length: duration);
 
             await Task.Delay((int)duration);
 
@@ -148,7 +158,7 @@ namespace DesktopApp
         {
             if (sender is Button button)
             {
-                // Сброс предыдущей активной кнопки
+                //Сброс предыдущей активной кнопки
                 if (_activeMenuButton != null)
                 {
                     Dispatcher.Dispatch(() =>
@@ -156,90 +166,56 @@ namespace DesktopApp
                         _activeMenuButton.BackgroundColor = Colors.Transparent;
                         _activeMenuButton.TextColor = Color.FromArgb("#BDC3C7");
                     });
-                }
 
-                // Установка новой активной кнопки
+                }
+                //Активная кнопка
                 _activeMenuButton = button;
 
                 Dispatcher.Dispatch(() =>
                 {
-                    _activeMenuButton.BackgroundColor = Color.FromArgb("#3498DB");
+
+                    _activeMenuButton.BackgroundColor = Color.FromArgb("#181A1D");
                     _activeMenuButton.TextColor = Colors.White;
                     PageLabel.Text = button.Text;
                 });
-
-                await DisplayAlert("Навигация", $"Выбрано: {button.Text}", "ОК");
+                //await DisplayAlert("Навигация", $"Выбрано: {button.Text}", "ОК");
+                var contentView = _contentViews[button.Text.Trim()];
+                contentContainer.Content = contentView;
             }
         }
 
-        // ============ ВЫПАДАЮЩЕЕ МЕНЮ ============
+        // ===== ВЫПАДАЮЩЕЕ МЕНЮ =====
 
-        private async void OnUserMenuButtonClicked(object sender, EventArgs e)
+        private void DropdownButton_Clicked(object sender, EventArgs e)
         {
-            if (_isUserMenuOpen)
-            {
-                await CloseUserMenu();
-            }
-            else
-            {
-                await OpenUserMenu();
-            }
+            Task.Delay(150);
+            DropdownMenu.IsVisible = !_isDropdownOpened;
+            DropdownMenuButton.Text = _isDropdownOpened ? "▼" : "▲";
+            _isDropdownOpened = !_isDropdownOpened;
+
+
+        }
+        //private async Task AnimateDropdownMenu(int duration)
+        //{
+        //    await Task.Delay(300);
+        //    DropdownMenu.IsVisible = !_isDropdownOpened;
+        //    DropdownMenuButton.Text = _isDropdownOpened ? "▼" : "▲";
+        //    _isDropdownOpened = !_isDropdownOpened;
+        //}
+
+        private void AdminExpander_ExpandedChanged(object sender, CommunityToolkit.Maui.Core.ExpandedChangedEventArgs e)
+        {
+            AdminExpanderIcon.Text = AdminExpander.IsExpanded ? "∧" : "∨";
         }
 
-        private async Task OpenUserMenu()
+        private void TmcExpander_ExpandedChanged(object sender, CommunityToolkit.Maui.Core.ExpandedChangedEventArgs e)
         {
-            await Dispatcher.DispatchAsync(async () =>
-            {
-                UserDropdownMenu.IsVisible = true;
-                UserDropdownMenu.Opacity = 0;
-                UserDropdownMenu.Scale = 0.9;
-
-                await Task.WhenAll(
-                    UserDropdownMenu.FadeTo(1, 200),
-                    UserDropdownMenu.ScaleTo(1, 200, Easing.SpringOut)
-                );
-
-                _isUserMenuOpen = true;
-                UserMenuButton.Text = "▲";
-            });
+            TmcExpanderIcon.Text = TmcExpander.IsExpanded ? "∧" : "∨";
         }
 
-        private async Task CloseUserMenu()
+        private void ReportsExpander_ExpandedChanged(object sender, CommunityToolkit.Maui.Core.ExpandedChangedEventArgs e)
         {
-            await Dispatcher.DispatchAsync(async () =>
-            {
-                await Task.WhenAll(
-                    UserDropdownMenu.FadeTo(0, 150),
-                    UserDropdownMenu.ScaleTo(0.9, 150)
-                );
-
-                UserDropdownMenu.IsVisible = false;
-                _isUserMenuOpen = false;
-                UserMenuButton.Text = "▼";
-            });
-        }
-
-        private async void OnProfileClicked(object sender, EventArgs e)
-        {
-            await CloseUserMenu();
-            await DisplayAlert("Профиль", "Открыть страницу профиля", "OK");
-        }
-
-        private async void OnSessionsClicked(object sender, EventArgs e)
-        {
-            await CloseUserMenu();
-            await DisplayAlert("Сессии", "Показать активные сессии", "OK");
-        }
-
-        private async void OnLogoutClicked(object sender, EventArgs e)
-        {
-            bool confirm = await DisplayAlert("Выход", "Вы уверены, что хотите выйти?", "Да", "Нет");
-
-            if (confirm)
-            {
-                await CloseUserMenu();
-                await DisplayAlert("Выход", "Вы вышли из системы", "OK");
-            }
+            ReportsExpanderIcon.Text = ReportsExpander.IsExpanded ? "∧" : "∨";
         }
     }
 }

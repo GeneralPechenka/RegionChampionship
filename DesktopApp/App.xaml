@@ -1,14 +1,23 @@
-﻿<?xml version = "1.0" encoding = "UTF-8" ?>
+﻿<?xml version="1.0" encoding="UTF-8" ?>
 <Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:local="clr-namespace:DesktopApp"
+             xmlns:u="clr-namespace:UraniumUI.Resources;assembly=UraniumUI"
+             xmlns:m="clr-namespace:UraniumUI.Material.Resources;assembly=UraniumUI.Material"
+             xmlns:uranium="http://schemas.enisn-projects.io/dotnet/maui/uraniumui"
+             xmlns:material="http://schemas.enisn-projects.io/dotnet/maui/uraniumui/material"
+
              x:Class="DesktopApp.App">
+    <!--xmlns:converters="clr-namespace:DesktopApp.Converters"-->
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="Resources/Styles/Colors.xaml" />
-                <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
+                <material:ColorResource />
+                <material:StyleResource />
+                <ResourceDictionary x:Name="appColors" Source="Resources/Styles/Colors.xaml" />
+                <ResourceDictionary x:Name="appStyles" Source="Resources/Styles/Styles.xaml" />
+
             </ResourceDictionary.MergedDictionaries>
+
         </ResourceDictionary>
     </Application.Resources>
 </Application>

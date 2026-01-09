@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:material="http://schemas.enisn-projects.io/dotnet/maui/uraniumui/material"
+             xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
+             x:Class="DesktopApp.ContentViews.VendingContentView">
+
+    <!-- Используем Grid как корень, но без RowDefinitions в самом Grid -->
+    <Grid>
+
+        <!-- КОНТЕНТ С ПРОКРУТКОЙ (занимает всё пространство) -->
+        <ScrollView>
+            <VerticalStackLayout Spacing="0">
+
+                <!-- ЗАГОЛОВОК -->
+                <Grid HeightRequest="60"
+                      BackgroundColor="#F6F6F6"
+                      Padding="20,0,20,0">
+                    <VerticalStackLayout Spacing="5" HorizontalOptions="Start">
+                        <Label Text="Торговые автоматы"
+                               FontSize="22"
+                               FontAttributes="Bold"
+                               TextColor="#0087CC"
+                               VerticalOptions="Center" />
+
+                        <Label x:Name="RecordsInfoLabel"
+                               FontSize="14"
+                               TextColor="#7F8C8D"
+                               VerticalOptions="Center" />
+                    </VerticalStackLayout>
+                </Grid>
+
+                <!-- ПАНЕЛЬ УПРАВЛЕНИЯ -->
+                <Border Stroke="LightGray"
+                        StrokeThickness="0"
+                        BackgroundColor="White"
+                        Padding="20,15,20,15">
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- ЛЕВАЯ ЧАСТЬ: Фильтры и элементы управления -->
+                        <HorizontalStackLayout Grid.Column="0" 
+                                               Spacing="15"
+                                               VerticalOptions="Center">
+
+                            <Label Text="Показатель"
+                                   FontSize="14"
+                                   FontAttributes="Bold"
+                                   TextColor="#2C3E50"
+                                   VerticalOptions="Center" />
+
+                            <Picker x:Name="PageSizePicker"
+                                    WidthRequest="80"
+                                    HeightRequest="35"
+                                    SelectedIndexChanged="OnPageSizeChanged">
+                                <Picker.ItemsSource>
+                                    <x:Array Type="{x:Type x:Int32}">
+                                        <x:Int32>10</x:Int32>
+                                        <x:Int32>25</x:Int32>
+                                        <x:Int32>50</x:Int32>
+                                        <x:Int32>100</x:Int32>
+                                    </x:Array>
+                                </Picker.ItemsSource>
+                            </Picker>
+
+                            <Label Text="записей"
+                                   FontSize="14"
+                                   TextColor="#7F8C8D"
+                                   VerticalOptions="Center" />
+
+                            <Entry x:Name="FilterEntry"
+                                   Placeholder="Фильтр по названию..."
+                                   WidthRequest="250"
+                                   HeightRequest="35"
+                                   TextChanged="OnFilterTextChanged" />
+
+                        </HorizontalStackLayout>
+
+                        <!-- ПРАВАЯ ЧАСТЬ: Кнопки -->
+                        <HorizontalStackLayout Grid.Column="1"
+                                               Spacing="10"
+                                               VerticalOptions="Center"
+                                               HorizontalOptions="End">
+
+                            <Button CornerRadius="5"
+                                    BackgroundColor="Transparent"
+                                    BorderWidth="1"
+                                    BorderColor="Black"
+                                    TextColor="Black"
+                                    HeightRequest="35"
+                                    Clicked="OnAddButtonClicked">
+
+                                <Button.ImageSource>
+                                    <FontImageSource FontFamily="FASolid" 
+                                                     Glyph="{x:Static fa:Solid.Plus}" 
+                                                     Color="Black" 
+                                                     Size="14" />
+                                </Button.ImageSource>
+                                <Button.Text>Добавить</Button.Text>
+                            </Button>
+
+                            <Button CornerRadius="5"
+                                    BackgroundColor="Transparent"
+                                    BorderWidth="1"
+                                    BorderColor="Black"
+                                    TextColor="Black"
+                                    HeightRequest="35"
+                                    Clicked="OnExportButtonClicked">
+
+                                <Button.ImageSource>
+                                    <FontImageSource FontFamily="FASolid" 
+                                                     Glyph="{x:Static fa:Solid.Share}" 
+                                                     Color="Black" 
+                                                     Size="14" />
+                                </Button.ImageSource>
+                                <Button.Text>Экспорт</Button.Text>
+                            </Button>
+
+                        </HorizontalStackLayout>
+                    </Grid>
+                </Border>
+
+                <!-- КОНТЕЙНЕР ДЛЯ ТАБЛИЦЫ (добавляем Margin снизу для пагинации) -->
+                <Border Stroke="LightGray"
+                        StrokeThickness="1"
+                        Margin="20,10,20,10"
+                        Padding="0"
+                        VerticalOptions="FillAndExpand">
+
+                    <!-- DATA GRID -->
+                    <material:DataGrid x:Name="VendingsGrid"
+                                       ItemsSource="{Binding Vendings}"
+                                       VerticalOptions="FillAndExpand"
+                                       HorizontalOptions="FillAndExpand"
+                                       BackgroundColor="White">
+                        <ActivityIndicator IsRunning="{Binding IsBusy}" Margin="40" />
+
+                        <!-- КОЛОНКИ -->
+                        <material:DataGrid.Columns>
+                            <material:DataGridColumn Title="ID" 
+                                                     ValueBinding="{Binding Id}"
+                                                     Width="*"/>
+
+                            <material:DataGridColumn Title="Название автомата" Width="*">
+                                <material:DataGridColumn.CellItemTemplate>
+                                    <DataTemplate>
+                                        <Label Text="{Binding Name}"
+                                               TextColor="#0087CC"
+                                               VerticalOptions="Center"
+                                               HorizontalOptions="Center" />
+                                    </DataTemplate>
+                                </material:DataGridColumn.CellItemTemplate>
+                            </material:DataGridColumn>
+
+                            <material:DataGridColumn Title="Модель" 
+                                                     ValueBinding="{Binding Model}"
+                                                     Width="*" />
+
+                            <material:DataGridColumn Title="Компания" 
+                                                     Width="*">
+                                <material:DataGridColumn.CellItemTemplate>
+                                    <DataTemplate>
+                                        <Label Text="{Binding Company}"
+                                               TextColor="#0087CC"
+                                               VerticalOptions="Center"
+                                               HorizontalOptions="Center" />
+                                    </DataTemplate>
+                                </material:DataGridColumn.CellItemTemplate>
+                            </material:DataGridColumn>
+
+                            <material:DataGridColumn Title="Модем" 
+                                                     ValueBinding="{Binding Modem}"
+                                                     Width="*" />
+
+                            <material:DataGridColumn Title="Адрес / Место" 
+                                                     ValueBinding="{Binding Address}"
+                                                     Width="*" />
+
+                            <material:DataGridColumn Title="В работе с" 
+                                                     Width="*"
+                                                     ValueBinding="{Binding InServiceSinceFormat}" />
+
+                            <material:DataGridColumn Title="Действия" 
+                                                     Width="*">
+                                <material:DataGridColumn.CellItemTemplate>
+                                    <DataTemplate>
+                                        <HorizontalStackLayout Spacing="8"
+                                                               VerticalOptions="Center"
+                                                               HorizontalOptions="Center">
+                                            <Button StyleClass="TextButton"
+                                                    Text="✏️"
+                                                    FontSize="16"
+                                                    Padding="0"
+                                                    WidthRequest="30"
+                                                    HeightRequest="30"
+                                                    Clicked="OnEditClicked"
+                                                    CommandParameter="{Binding .}" />
+
+                                            <Button StyleClass="TextButton"
+                                                    Text="🗑️"
+                                                    FontSize="16"
+                                                    Padding="0"
+                                                    WidthRequest="30"
+                                                    HeightRequest="30"
+                                                    Clicked="OnDeleteClicked"
+                                                    CommandParameter="{Binding .}" />
+                                        </HorizontalStackLayout>
+                                    </DataTemplate>
+                                </material:DataGridColumn.CellItemTemplate>
+                            </material:DataGridColumn>
+                        </material:DataGrid.Columns>
+                    </material:DataGrid>
+                </Border>
+
+                <!-- ПРОСТРАНСТВО ДЛЯ ПАГИНАЦИИ (чтобы контент не скрывался под ней) -->
+                <BoxView HeightRequest="70" Color="Transparent" />
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- ПАГИНАЦИЯ (поверх всего, всегда видна) -->
+        <Border Stroke="LightGray"
+                StrokeThickness="1"
+                BackgroundColor="White"
+                Padding="20,10,20,10"
+                HeightRequest="70"
+                VerticalOptions="End"
+                HorizontalOptions="FillAndExpand">
+
+            <Grid ColumnDefinitions="Auto,*,Auto" 
+                  VerticalOptions="Center">
+
+                <!-- Левая часть: Информация -->
+                <Label x:Name="PaginationInfoLabel"
+                       Grid.Column="0"
+                       FontSize="14"
+                       TextColor="#7F8C8D"
+                       VerticalOptions="Center"
+                       HorizontalOptions="Start"/>
+
+                <!-- Центральная часть: Кнопки пагинации -->
+                <HorizontalStackLayout Grid.Column="2"
+                                       Spacing="0"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center">
+
+                    <Button x:Name="PreviousButton"
+                            Clicked="OnPreviousPageClicked"
+                            CornerRadius="2"
+                            BackgroundColor="White"
+                            BorderWidth="1"
+                            BorderColor="LightGray"
+                            WidthRequest="40"
+                            HeightRequest="35"
+                            VerticalOptions="Center">
+                        <Button.ImageSource>
+                            <FontImageSource FontFamily="FASolid" 
+                                             Glyph="{x:Static fa:Solid.LessThan}" 
+                                             Color="Black" 
+                                             Size="14" />
+                        </Button.ImageSource>
+                    </Button>
+
+                    <Button x:Name="CurrentPageNumberButton" 
+                            Text="1"
+                            BackgroundColor="#0087CC"
+                            TextColor="White"
+                            FontSize="14"
+                            BorderWidth="1"
+                            BorderColor="LightGray"
+                            WidthRequest="40"
+                            HeightRequest="35"
+                            CornerRadius="0"
+                            VerticalOptions="Center"/>
+
+                    <Button x:Name="NextButton"
+                            Clicked="OnNextPageClicked"
+                            CornerRadius="2"
+                            BackgroundColor="White"
+                            BorderWidth="1"
+                            BorderColor="LightGray"
+                            WidthRequest="40"
+                            HeightRequest="35"
+                            VerticalOptions="Center">
+                        <Button.ImageSource>
+                            <FontImageSource FontFamily="FASolid" 
+                                             Glyph="{x:Static fa:Solid.GreaterThan}" 
+                                             Color="Black" 
+                                             Size="14" />
+                        </Button.ImageSource>
+                    </Button>
+                </HorizontalStackLayout>
+
+            </Grid>
+        </Border>
+
+    </Grid>
+
+</ContentView>

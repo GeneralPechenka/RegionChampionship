@@ -1,6 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              x:Class="DesktopApp.MainPage">
 
     <Grid RowDefinitions="50,*">
@@ -33,7 +34,7 @@
                            FontSize="10"/>
                 </VerticalStackLayout>
 
-                <Button x:Name="UserMenuButton"
+                <Button x:Name="DropdownMenuButton"
                         Text="▼"
                         BackgroundColor="Transparent"
                         WidthRequest="20"
@@ -41,11 +42,23 @@
                         FontSize="10"
                         TextColor="#666666"
                         VerticalOptions="Center"
-                        Clicked="OnUserMenuButtonClicked"/>
+                        Clicked="DropdownButton_Clicked"
+                        />
 
             </HorizontalStackLayout>
         </Grid>
-
+        <!-- Выпадающеее меню-->
+        <VerticalStackLayout x:Name="DropdownMenu" 
+                             Grid.Row="1" ZIndex="999" 
+                             IsVisible="False"
+                             BackgroundColor="White"
+                             WidthRequest="180"
+                             HorizontalOptions="End"
+                             VerticalOptions="Start"
+                             Margin="0,0,25,0">
+            <Button x:Name="UserProfileButton" Text="Профиль" CornerRadius="0" TextColor="Black" BackgroundColor="Transparent"/>
+            <Button x:Name="LogOutButton" CornerRadius="0" TextColor="Black" BackgroundColor="Transparent" Text="Выйти" />
+        </VerticalStackLayout>
         <!-- ОСНОВНОЙ КОНТЕНТ -->
         <Grid x:Name="MainGrid" 
               ColumnDefinitions="200,*" 
@@ -66,54 +79,160 @@
                 <Button Text="Главная" 
                         BackgroundColor="Transparent"
                         TextColor="#BDC3C7"
-                        HeightRequest="50"
-                        FontSize="16"
+                        HeightRequest="20"
+                        FontSize="14"
                         Clicked="BtnClicked"
                         CornerRadius="0"/>
 
                 <Button Text="Монитор ТА" 
                         BackgroundColor="Transparent"
                         TextColor="#BDC3C7"
-                        HeightRequest="50"
-                        FontSize="16"
+                        HeightRequest="20"
+                        FontSize="14"
                         Clicked="BtnClicked"
                         CornerRadius="0"/>
 
-                <Button Text="Детальные отчеты" 
-                        BackgroundColor="Transparent"
-                        TextColor="#BDC3C7"
-                        HeightRequest="50"
-                        FontSize="16"
-                        Clicked="BtnClicked"
-                        CornerRadius="0"/>
+                <toolkit:Expander x:Name="ReportsExpander" 
+                                  BackgroundColor="Transparent" 
+                                  Direction="Down"
+                                  ExpandedChanged="ReportsExpander_ExpandedChanged"
 
-                <Button Text="Учет ТМЦ" 
-                        BackgroundColor="Transparent"
-                        TextColor="#BDC3C7"
-                        HeightRequest="50"
-                        FontSize="16"
-                        Clicked="BtnClicked"
-                        CornerRadius="0"/>
+                                  >
+                    <toolkit:Expander.Header>
+                        <Grid Padding="10,0,15,0" HeightRequest="30" ColumnDefinitions="auto,*,auto">
+                            <Label Text="Детальные отчёты"
+                                   TextColor="#BDC3C7"
+                                   HeightRequest="20"
+                                   FontSize="14"
+                                   HorizontalTextAlignment="Center"
+                                   Grid.Column="0"
+                                />
+                            <Label Text="∨"
+                                   x:Name="ReportsExpanderIcon"
+                                   TextColor="#BDC3C7"
+                                   HeightRequest="20"
+                                   FontSize="14"
 
-                <Button Text="Администрирование" 
-                        BackgroundColor="Transparent"
-                        TextColor="#BDC3C7"
-                        HeightRequest="50"
-                        FontSize="16"
-                        Clicked="BtnClicked"
-                        CornerRadius="0"/>
+                                   Grid.Column="2"
+                               />
+                        </Grid>
+                    </toolkit:Expander.Header>
+
+                </toolkit:Expander>
+
+
+                <toolkit:Expander x:Name="TmcExpander" 
+                                  BackgroundColor="Transparent" 
+                                  Direction="Down"
+                                  ExpandedChanged="TmcExpander_ExpandedChanged"
+
+                                  >
+                    <toolkit:Expander.Header>
+                        <Grid Padding="10,0,15,0" HeightRequest="30" ColumnDefinitions="auto,*,auto">
+                            <Label Text="Учёт ТМЦ"
+                                   TextColor="#BDC3C7"
+                                   HeightRequest="20"
+                                   FontSize="14"
+                                   HorizontalTextAlignment="Center"
+                                   Grid.Column="0"
+                                />
+                            <Label Text="∨"
+                                   x:Name="TmcExpanderIcon"
+                                   TextColor="#BDC3C7"
+                                   HeightRequest="20"
+                                   FontSize="14"
+
+                                   Grid.Column="2"
+                               />
+                        </Grid>
+                    </toolkit:Expander.Header>
+
+                </toolkit:Expander>
+
+                <toolkit:Expander x:Name="AdminExpander" 
+                                  BackgroundColor="Transparent" 
+                                  Direction="Down"
+                                  ExpandedChanged="AdminExpander_ExpandedChanged"
+
+                                  >
+                    <toolkit:Expander.Header>
+                        <Grid Padding="10,0,15,0" HeightRequest="30" ColumnDefinitions="auto,*,auto">
+                            <Label Text="Администрирование"
+                                   TextColor="#BDC3C7"
+                                   HeightRequest="20"
+                                   FontSize="14"
+                                   HorizontalTextAlignment="Center"
+                                   Grid.Column="0"
+                                />
+                            <Label Text="∨"
+                                   x:Name="AdminExpanderIcon"
+                                   TextColor="#BDC3C7"
+                                   HeightRequest="20"
+                                   FontSize="14"
+
+                                   Grid.Column="2"
+                               />
+                        </Grid>
+                    </toolkit:Expander.Header>
+                    <VerticalStackLayout Spacing="0" 
+                                         Margin="0" 
+                                         x:Name="AdminExpanderBody">
+                        <Button Text="Торговые автоматы"
+                            x:Name="VendingsButton"
+                            BackgroundColor="Transparent"
+                            TextColor="#BDC3C7"
+                            HeightRequest="10"
+                            FontSize="12"
+                            Clicked="BtnClicked"
+                            CornerRadius="0" />
+                        <Button Text="Компании"
+                            x:Name="CompaniesButton"
+                            BackgroundColor="Transparent"
+                            TextColor="#BDC3C7"
+                            HeightRequest="10"
+                            FontSize="12"
+                            Clicked="BtnClicked"
+                            CornerRadius="0" />
+                        <Button Text="Пользователи"
+                            x:Name="UsersButton"
+                            BackgroundColor="Transparent"
+                            TextColor="#BDC3C7"
+                            HeightRequest="10"
+                            FontSize="12"
+                            Clicked="BtnClicked"
+                            CornerRadius="0" />
+                        <Button Text="Модемы"
+                            x:Name="ModemsButton"
+                            BackgroundColor="Transparent"
+                            TextColor="#BDC3C7"
+                            HeightRequest="10"
+                            FontSize="12"
+                            Clicked="BtnClicked"
+                            CornerRadius="0" />
+                        <Button Text="Дополнительные"
+                            x:Name="AdditionalButton"
+                            BackgroundColor="Transparent"
+                            TextColor="#BDC3C7"
+                            HeightRequest="10"
+                            FontSize="12"
+                            Clicked="BtnClicked"
+                            CornerRadius="0" />
+                    </VerticalStackLayout>
+                </toolkit:Expander>
 
             </VerticalStackLayout>
 
             <!-- ПРАВАЯ ОБЛАСТЬ -->
             <Grid Grid.Column="1" 
-                  BackgroundColor="#F5F5F5">
-
+                  BackgroundColor="#F5F5F5"
+                  RowDefinitions="60,*">
+                   
                 <!-- Панель с кнопкой меню -->
                 <Grid BackgroundColor="Black" 
                       HeightRequest="60" 
                       ColumnSpacing="15" 
                       Padding="10,0,10,0" 
+                      Grid.Row="0"
                       VerticalOptions="Start">
 
                     <Grid.ColumnDefinitions>
@@ -153,81 +272,12 @@
                            Grid.Column="1"/>
 
                 </Grid>
-
+                <ContentView Grid.Row="1"
+                             x:Name="contentContainer"
+                              />
             </Grid>
 
         </Grid>
-
-        <!-- ВЫПАДАЮЩЕЕ МЕНЮ ПОЛЬЗОВАТЕЛЯ -->
-        <Frame x:Name="UserDropdownMenu"
-               BackgroundColor="White"
-               CornerRadius="5"
-               Padding="0"
-               HasShadow="True"
-               IsVisible="False"
-               Opacity="0"
-               Scale="0.9"
-               HorizontalOptions="End"
-               VerticalOptions="Start"
-               Margin="0,55,10,0"
-               WidthRequest="200">
-
-            <VerticalStackLayout Spacing="0">
-
-                <!-- Шапка с информацией -->
-                <Frame BackgroundColor="#2C3E50" 
-                       HeightRequest="60"
-                       Padding="15"
-                       >
-                    <VerticalStackLayout Spacing="3">
-                        <Label Text="Автоматов А.А." 
-                               TextColor="White" 
-                               FontSize="14"
-                               FontAttributes="Bold"/>
-                        <Label Text="Администратор" 
-                               TextColor="#BDC3C7" 
-                               FontSize="11"/>
-                    </VerticalStackLayout>
-                </Frame>
-
-                <!-- Пункты меню -->
-                <Button Text="Мой профиль"
-                        BackgroundColor="White"
-                        TextColor="#333333"
-                        FontSize="13"
-                        HeightRequest="45"
-                        HorizontalOptions="Fill"
-                        CornerRadius="0"
-                        Padding="15,0"
-                        Clicked="OnProfileClicked"/>
-
-                <Button Text="Мои сессии"
-                        BackgroundColor="White"
-                        TextColor="#333333"
-                        FontSize="13"
-                        HeightRequest="45"
-                        HorizontalOptions="Fill"
-                        CornerRadius="0"
-                        Padding="15,0"
-                        Clicked="OnSessionsClicked"/>
-
-                <!-- Разделитель -->
-                <BoxView HeightRequest="1" 
-                         BackgroundColor="#EEEEEE" 
-                         Margin="10,5"/>
-
-                <Button Text="Выход"
-                        BackgroundColor="White"
-                        TextColor="#E74C3C"
-                        FontSize="13"
-                        HeightRequest="45"
-                        HorizontalOptions="Fill"
-                        CornerRadius="0"
-                        Padding="15,0"
-                        Clicked="OnLogoutClicked"/>
-
-            </VerticalStackLayout>
-        </Frame>
 
     </Grid>
 
